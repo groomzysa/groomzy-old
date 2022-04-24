@@ -2,9 +2,9 @@ import 'package:dropdown_search/dropdown_search.dart';
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:get/get.dart';
-import 'package:graphql_flutter/graphql_flutter.dart';
-import 'package:groomzy/api/graphql/mutations/service/add_service.dart';
+import 'package:groomzy/api/graphql/mutations/provider/service/add_service_mutation.dart';
 import 'package:groomzy/controller/provider_controller.dart';
+import 'package:groomzy/controller/service_controller.dart';
 import 'package:groomzy/utils/utils.dart';
 import 'package:groomzy/view/widgets/alert_dialog/alert_dialog.dart';
 import 'package:groomzy/view/widgets/button/button.dart';
@@ -17,90 +17,56 @@ class AddService extends StatelessWidget {
 
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   final ProviderController providerController = Get.find();
+  final ServiceController serviceController = Get.find();
 
   @override
   Widget build(BuildContext context) {
-
-    Future<void> _submit(
-        {MultiSourceResult Function(Map<String, dynamic>,
-                {Object? optimisticResult})?
-            addService}) async {
+    Future<void> _submit() async {
       if (!_formKey.currentState!.validate()) {
         return;
       }
       _formKey.currentState!.save();
 
-      addService!({
-        'category': '_category.value',
-        'title': '_title.value',
-        'description': '_description.value',
-        'duration': '_duration.value',
-        'durationUnit': '_durationUnit.value',
-        'price': '_price.value',
-        'inHouse': '_inHouse.value',
-      });
+      try {
+        Map<String, dynamic> response =
+            await AddServiceMutation().addServiceMutation();
+        if (response['status']!) {
+          Get.back();
+          showDialog(
+            barrierDismissible: false,
+            context: context,
+            builder: (BuildContext context) {
+              return AndroidAlertDialog(
+                title: 'Info',
+                message: Text(
+                  response['message'],
+                ),
+                popTimes: 1,
+              );
+            },
+          );
+        }
+      } catch (err) {
+        showDialog(
+          context: context,
+          builder: (BuildContext context) {
+            return AndroidAlertDialog(
+              title: 'Oops!',
+              message: Text(
+                '$err',
+              ),
+            );
+          },
+        );
+      }
     }
 
-    return Mutation(
-      options: MutationOptions(
-        document: gql(
-          AddServiceMutation().addService,
-        ),
-        update: (
-          GraphQLDataProxy? cache,
-          QueryResult? result,
-        ) {
-          if (result!.hasException) {
-            String errMessage = result.exception!.graphqlErrors[0].message;
-            showDialog(
-              context: context,
-              builder: (BuildContext context) {
-                return AndroidAlertDialog(
-                  title: 'Error',
-                  message: Text(
-                    errMessage,
-                    style: const TextStyle(
-                      color: Colors.redAccent,
-                    ),
-                  ),
-                  popTimes: 2,
-                );
-              },
-            );
-          }
-        },
-        onCompleted: (dynamic addServiceResult) async {
-          if (addServiceResult != null) {
-            String message = addServiceResult['addService']['message'];
-            if (message.isNotEmpty) {
-              showDialog(
-                context: context,
-                builder: (BuildContext context) {
-                  return AndroidAlertDialog(
-                    title: 'Completed',
-                    message: Text(
-                      message,
-                      style: const TextStyle(
-                        color: Colors.lightGreen,
-                      ),
-                    ),
-                    popTimes: 2,
-                  );
-                },
-              );
-            }
-          }
-        },
-      ),
-      builder: (
-        RunMutation? runAddServiceMutation,
-        QueryResult? addServiceResult,
-      ) {
-        if (addServiceResult!.isLoading) {
-          return const AndroidLoading();
-        }
-
-        return Form(
+    return Obx(() {
+      if (serviceController.isLoading) {
+        return const AndroidLoading();
+      }
+      return SingleChildScrollView(
+        child: Form(
           key: _formKey,
           child: Container(
             constraints: const BoxConstraints(
@@ -129,13 +95,10 @@ class AddService extends StatelessWidget {
                   const SizedBox(height: 10.0),
                   DropdownSearch<String>(
                     mode: Mode.MENU,
-                    // showSelectedItem: true,
-                    items: Utils().categories(),
-                    label: "Category",
-                    hint: "Select category",
-                    selectedItem: '_category.value',
+                    items: Utils().categories,
+                    selectedItem: serviceController.category.isEmpty ? null : serviceController.category,
                     onChanged: (String? input) {
-                      // _category.value = input;
+                      serviceController.category = input ?? '';
                     },
                     validator: (input) {
                       if (input == null || input.isEmpty) {
@@ -144,9 +107,11 @@ class AddService extends StatelessWidget {
 
                       return null;
                     },
-                    // autoFocusSearchBox: false,
                     dropdownSearchDecoration: const InputDecoration(
+                      prefixIcon: Icon(Icons.category_outlined, color: Colors.grey,),
                       labelStyle: TextStyle(color: Colors.grey),
+                      labelText: 'Category',
+                      hintText: 'Select category',
                       contentPadding:
                           EdgeInsets.only(left: 10.0, top: 5.0, bottom: 5.0),
                       focusedBorder: OutlineInputBorder(
@@ -162,10 +127,10 @@ class AddService extends StatelessWidget {
                   ),
                   const SizedBox(height: 10.0),
                   AndroidTextField(
-                    value: '_title.value',
+                    value: serviceController.title,
                     label: 'title',
                     onInputChange: (String input) {
-                      // _title.value = input;
+                      serviceController.title = input;
                     },
                     onValidation: (String? input) {
                       if (input == null || input.isEmpty) {
@@ -177,15 +142,15 @@ class AddService extends StatelessWidget {
                   ),
                   const SizedBox(height: 10.0),
                   AndroidTextField(
-                    value: '_description.value',
+                    value: serviceController.description,
                     label: 'description',
                     onInputChange: (String input) {
-                      // _description.value = input;
+                      serviceController.description = input;
                     },
                   ),
                   const SizedBox(height: 10.0),
                   TextFormField(
-                    initialValue: '_price.value?.toString()',
+                    initialValue: serviceController.price.toString(),
                     keyboardType: TextInputType.number,
                     decoration: const InputDecoration(
                       labelText: 'Price',
@@ -198,9 +163,9 @@ class AddService extends StatelessWidget {
                     ),
                     cursorColor: Colors.grey,
                     onChanged: (String? input) {
-                      // _price.value = input != null && input.isNotEmpty
-                      //     ? double.parse(input)
-                      //     : 0.0;
+                      serviceController.price = input != null && input.isNotEmpty
+                          ? double.parse(input)
+                          : 0.0;
                     },
                     validator: (String? input) {
                       if (input == null || input.isEmpty) {
@@ -212,7 +177,7 @@ class AddService extends StatelessWidget {
                   ),
                   const SizedBox(height: 10.0),
                   TextFormField(
-                    initialValue: '_duration.value?.toString()',
+                    initialValue: serviceController.duration.toString(),
                     keyboardType: TextInputType.number,
                     decoration: const InputDecoration(
                       labelText: 'Duration',
@@ -225,9 +190,9 @@ class AddService extends StatelessWidget {
                     ),
                     cursorColor: Colors.grey,
                     onChanged: (String? input) {
-                      // _duration.value = input != null && input.isNotEmpty
-                      //     ? double.parse(input)
-                      //     : 0.0;
+                      serviceController.duration = input != null && input.isNotEmpty
+                          ? double.parse(input)
+                          : 0.0;
                     },
                     validator: (String? input) {
                       if (input == null || input.isEmpty) {
@@ -240,14 +205,11 @@ class AddService extends StatelessWidget {
                   const SizedBox(height: 10.0),
                   DropdownSearch<String>(
                     mode: Mode.MENU,
-                    // showSelectedItem: true,
                     items: const ['min', 'hrz'],
-                    label: "Duration unit",
-                    hint: "Select duration unit",
                     maxHeight: 120.0,
-                    selectedItem: '_durationUnit.value',
+                    selectedItem: serviceController.durationUnit.isEmpty ? null : serviceController.durationUnit,
                     onChanged: (String? input) {
-                      // _durationUnit.value = input;
+                      serviceController.durationUnit = input ?? '';
                     },
                     validator: (input) {
                       if (input == null || input.isEmpty) {
@@ -257,7 +219,10 @@ class AddService extends StatelessWidget {
                       return null;
                     },
                     dropdownSearchDecoration: const InputDecoration(
+                      prefixIcon: Icon(Icons.timer_outlined, color: Colors.grey,),
                       labelStyle: TextStyle(color: Colors.grey),
+                      labelText: "Duration unit",
+                      hintText: "Select duration unit",
                       contentPadding:
                           EdgeInsets.only(left: 10.0, top: 5.0, bottom: 5.0),
                       focusedBorder: OutlineInputBorder(
@@ -274,24 +239,24 @@ class AddService extends StatelessWidget {
                   const SizedBox(height: 10.0),
                   AndroidCheckBox(
                     label: 'In house call?',
-                    checked: false,
+                    checked: serviceController.inHouse,
                     onChecked: (bool? input) {
-                      // _inHouse.value = input!;
+                      serviceController.inHouse = input ?? false;
                     },
                   ),
                   AndroidButton(
                     label: 'Add',
                     backgroundColor: Theme.of(context).primaryColor,
                     pressed: () {
-                      _submit(addService: runAddServiceMutation);
+                      _submit();
                     },
                   ),
                 ],
               ),
             ),
           ),
-        );
-      },
-    );
+        ),
+      );
+    });
   }
 }

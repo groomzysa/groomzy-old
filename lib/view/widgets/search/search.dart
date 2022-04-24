@@ -13,27 +13,22 @@ class AndroidSearch extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: 40.0,
-      width: MediaQuery.of(context).size.width * 0.92,
-      child: Obx( () {
-          return AndroidTextField(
-            value: exploreController.search,
-            label: 'Search',
-            suffixIcon: Icons.search_outlined,
-            borderRadius: 50,
-            onInputChange: (String input) {
-              EasyDebounce.debounce(
-                'search-deBouncer', // <-- An ID for this particular deBouncer
-                const Duration(seconds: 1), // <-- The debounce duration
+    return Obx( () {
+      return AndroidTextField(
+        value: exploreController.search,
+        label: 'Search',
+        suffixIcon: Icons.search_outlined,
+        borderRadius: 50,
+        onInputChange: (String input) {
+          EasyDebounce.debounce(
+            'search-deBouncer', // <-- An ID for this particular deBouncer
+            const Duration(seconds: 1), // <-- The debounce duration
                 () {
-                  exploreController.search = input;
-                }, // <-- The target method
-              );
-            },
+              exploreController.search = input;
+            }, // <-- The target method
           );
         },
-      ),
-    );
+      );
+    });
   }
 }

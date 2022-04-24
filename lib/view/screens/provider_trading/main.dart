@@ -13,7 +13,7 @@ class ProviderTradingScreen extends StatelessWidget {
   ProviderTradingScreen({Key? key}) : super(key: key);
 
   final ProviderTradingController providerTradingController =
-      Get.find<ProviderTradingController>();
+      Get.put(ProviderTradingController());
 
   @override
   Widget build(BuildContext context) {

@@ -1,21 +1,21 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import 'package:groomzy/controller/operating_time_controller.dart';
+import 'package:groomzy/model/day_time.dart';
+import 'package:groomzy/utils/utils.dart';
 import 'package:groomzy/view/screens/provider/widgets/operating_times/delete_operating_time.dart';
 import 'package:groomzy/view/screens/provider/widgets/operating_times/edit_operating_times.dart';
 
 
 class OperatingTime extends StatelessWidget {
-  final int dayTimeId;
-  final String day;
-  final String startTime;
-  final String endTime;
+  final DayTime dayTime;
 
-  const OperatingTime({
-    required this.dayTimeId,
-    required this.day,
-    required this.startTime,
-    required this.endTime,
+  OperatingTime({
+    required this.dayTime,
     Key? key,
   }) : super(key: key);
+
+  final OperatingTimeController operatingTimeController = Get.find();
 
   @override
   Widget build(BuildContext context) {
@@ -68,17 +68,17 @@ class OperatingTime extends StatelessWidget {
                   TableRow(children: [
                     TableCell(
                       child: Text(
-                        day,
+                        Utils().mapDayToString(dayTime.day.day),
                       ),
                     ),
                     TableCell(
                       child: Text(
-                        startTime,
+                        dayTime.time.startTime,
                       ),
                     ),
                     TableCell(
                       child: Text(
-                        endTime,
+                        dayTime.time.endTime,
                       ),
                     ),
                   ])
@@ -92,16 +92,16 @@ class OperatingTime extends StatelessWidget {
                   children: [
                     GestureDetector(
                       onTap: () {
+                        operatingTimeController.id = dayTime.id;
+                        operatingTimeController.day = Utils().mapDayToString(dayTime.day.day);
+                        operatingTimeController.startTime = dayTime.time.startTime;
+                        operatingTimeController.endTime = dayTime.time.endTime;
+
                         showDialog(
                           context: context,
                           builder: (context) {
                             return Dialog(
-                              child: EditOperatingTime(
-                                dayTimeId: dayTimeId,
-                                day: day,
-                                startTime: startTime,
-                                endTime: endTime,
-                              ),
+                              child: EditOperatingTime(),
                             );
                           },
                         );
@@ -114,12 +114,12 @@ class OperatingTime extends StatelessWidget {
                     const VerticalDivider(),
                     GestureDetector(
                       onTap: () {
+                        operatingTimeController.id = dayTime.id;
+
                         showDialog(
                           context: context,
                           builder: (context) {
-                            return DeleteOperatingTime(
-                              dayTimeId: dayTimeId,
-                            );
+                            return DeleteOperatingTime();
                           },
                         );
                       },

@@ -1,51 +1,32 @@
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
-import 'package:groomzy/utils/enums.dart';
+import 'package:groomzy/model/booking.dart';
 import 'package:groomzy/utils/utils.dart';
 import 'package:groomzy/view/widgets/heading/heading.dart';
+import 'package:intl/intl.dart';
 
 class BookingDetails extends StatelessWidget {
-  final String title;
-  final String provider;
-  final BookingStatus bookingStatus;
-  final String bookingDate;
-  final String bookingTime;
-  final String inHouse;
-  final String bookingDuration;
-  final String bookingPrice;
+  final Booking booking;
 
   const BookingDetails({
-    required this.title,
-    required this.provider,
-    required this.bookingStatus,
-    required this.bookingTime,
-    required this.bookingDate,
-    required this.inHouse,
-    required this.bookingDuration,
-    required this.bookingPrice,
+    required this.booking,
     Key? key,
   }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    Widget bookingData({required String title, required String value, Color? valueColor}) {
+    Widget bookingData(
+        {required String title, required String value, Color? valueColor}) {
       return Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          SizedBox(
-            width: 150.0,
-            child: Text(
-              title,
-              style: const TextStyle(fontWeight: FontWeight.w500),
-            ),
+          Text(
+            title,
+            style: const TextStyle(fontWeight: FontWeight.w500),
           ),
-          // SizedBox(width: 20.0,),
-          SizedBox(
-            width: 150.0,
-            child: Text(
-              value,
-              style: TextStyle(color: valueColor),
-            ),
+          Text(
+            value,
+            style: TextStyle(color: valueColor),
           ),
         ],
       );
@@ -82,25 +63,32 @@ class BookingDetails extends StatelessWidget {
             ),
             const Divider(),
             const SizedBox(height: 10.0),
-            bookingData(title: 'Provider:', value: provider),
+            bookingData(
+                title: 'Provider:', value: booking.provider?.fullName ?? ''),
             const SizedBox(height: 10.0),
-            bookingData(title: 'Title:', value: title),
+            bookingData(title: 'Title:', value: booking.service.title),
             const SizedBox(height: 10.0),
-            bookingData(title: 'Price:', value: bookingPrice),
+            bookingData(title: 'Price:', value: 'R${booking.service.price}'),
             const SizedBox(height: 10.0),
             bookingData(
               title: 'Status:',
-              value: Utils().mapBookingStatusToString(bookingStatus),
-              valueColor: Utils().bookingStatusColor(bookingStatus),
+              value: Utils().mapBookingStatusToString(booking.status),
+              valueColor: Utils().bookingStatusColor(booking.status),
             ),
             const SizedBox(height: 10.0),
-            bookingData(title: 'Date time:', value: bookingDate),
+            bookingData(
+                title: 'Date:',
+                value: DateFormat.yMEd().format(booking.bookingTime)),
             const SizedBox(height: 10.0),
-            bookingData(title: 'Time:', value: bookingTime),
+            bookingData(
+                title: 'Time:',
+                value: DateFormat.Hm().format(booking.bookingTime)),
             const SizedBox(height: 10.0),
-            bookingData(title: 'Duration:', value: bookingDuration),
+            bookingData(
+                title: 'Duration:', value: '${booking.service.duration.toString()} ${booking.service.durationUnit}'),
             const SizedBox(height: 10.0),
-            bookingData(title: 'In house call:', value: inHouse),
+            bookingData(
+                title: 'In house call:', value: booking.inHouse ? 'Yes' : 'No'),
             const SizedBox(height: 10.0),
           ],
         ),

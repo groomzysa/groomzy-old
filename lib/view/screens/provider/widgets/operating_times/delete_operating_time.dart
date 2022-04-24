@@ -1,105 +1,71 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:graphql_flutter/graphql_flutter.dart';
 
-import 'package:groomzy/api/graphql/mutations/operating_time/delete_operating_time.dart';
+import 'package:groomzy/api/graphql/mutations/provider/operating_time/delete_operating_time_mutation.dart';
+import 'package:groomzy/controller/operating_time_controller.dart';
 import 'package:groomzy/view/widgets/alert_dialog/alert_dialog.dart';
 import 'package:groomzy/view/widgets/loading/loading.dart';
 
 class DeleteOperatingTime extends StatelessWidget {
-  final int dayTimeId;
+  DeleteOperatingTime({Key? key}) : super(key: key);
 
-  const DeleteOperatingTime({
-    required this.dayTimeId,
-    Key? key,
-  }) : super(key: key);
+  final OperatingTimeController operatingTimeController = Get.find();
 
   @override
   Widget build(BuildContext context) {
-    Future<void> _submit(
-        {MultiSourceResult Function(Map<String, dynamic>,
-                {Object? optimisticResult})?
-            deleteOperatingTime}) async {
-      deleteOperatingTime!({
-        'dayTimeId': dayTimeId,
-      });
+    Future<void> _submit() async {
+      try {
+        Map<String, dynamic> response =
+            await DeleteOperatingTimeMutation().deleteOperatingTimeMutation();
+        if (response['status']!) {
+          Get.back();
+          showDialog(
+            barrierDismissible: false,
+            context: context,
+            builder: (BuildContext context) {
+              return AndroidAlertDialog(
+                title: 'Info',
+                message: Text(
+                  response['message'],
+                ),
+                popTimes: 2,
+              );
+            },
+          );
+        }
+      } catch (err) {
+        showDialog(
+          context: context,
+          builder: (BuildContext context) {
+            return AndroidAlertDialog(
+              title: 'Oops!',
+              message: Text(
+                '$err',
+              ),
+            );
+          },
+        );
+      }
     }
 
     return AlertDialog(
-      title: const Text('Please confirm'),
+      title: const Text('Confirm'),
       content: const Text('Are you sure want to delete business time?'),
       actions: <Widget>[
-        Mutation(
-          options: MutationOptions(
-            document: gql(
-              DeleteOperatingTimeMutation().deleteOperatingTime,
+        Obx(() {
+          if (operatingTimeController.isLoading) {
+            return const AndroidLoading();
+          }
+          return TextButton(
+            child: const Text(
+              'Delete',
+              style: TextStyle(color: Colors.redAccent),
             ),
-            update: (
-              GraphQLDataProxy? cache,
-              QueryResult? result,
-            ) {
-              if (result!.hasException) {
-                String errMessage = result.exception!.graphqlErrors[0].message;
-                showDialog(
-                  context: context,
-                  builder: (BuildContext context) {
-                    return AndroidAlertDialog(
-                      title: 'Error',
-                      message: Text(
-                        errMessage,
-                        style: const TextStyle(
-                          color: Colors.redAccent,
-                        ),
-                      ),
-                      popTimes: 2,
-                    );
-                  },
-                );
-              }
+            onPressed: () {
+              _submit();
             },
-            onCompleted: (dynamic deleteOperatingTimeResult) async {
-              if (deleteOperatingTimeResult != null) {
-                String message =
-                    deleteOperatingTimeResult['deleteOperatingTime']['message'];
-                if (message.isNotEmpty) {
-                  showDialog(
-                    context: context,
-                    builder: (BuildContext context) {
-                      return AndroidAlertDialog(
-                        title: 'Completed',
-                        message: Text(
-                          message,
-                          style: const TextStyle(
-                            color: Colors.lightGreen,
-                          ),
-                        ),
-                        popTimes: 2,
-                      );
-                    },
-                  );
-                }
-              }
-            },
-          ),
-          builder: (
-            RunMutation? runDeleteOperatingTimeMutation,
-            QueryResult? deleteOperatingTimeResult,
-          ) {
-            if (deleteOperatingTimeResult!.isLoading) {
-              return const AndroidLoading();
-            }
-
-            return TextButton(
-              child: const Text(
-                'Delete',
-                style: TextStyle(color: Colors.redAccent),
-              ),
-              onPressed: () {
-                _submit(deleteOperatingTime: runDeleteOperatingTimeMutation);
-              },
-            );
-          },
-        ),
+          );
+        }),
         TextButton(
           child: const Text(
             'Cancel',

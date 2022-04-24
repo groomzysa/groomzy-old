@@ -1,7 +1,11 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:get/get.dart';
+import 'package:groomzy/controller/book_controller.dart';
+import 'package:groomzy/controller/provider_controller.dart';
 import 'package:groomzy/model/day_time.dart';
 import 'package:groomzy/model/rating.dart';
 import 'package:groomzy/utils/enums.dart';
@@ -12,6 +16,63 @@ import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class Utils {
+  /*
+  * Getters
+  * */
+
+  List<String> get provinces {
+    return ['Kwa-Zulu Natal'];
+  }
+
+  List<String> get weekDays {
+    return [
+      'Mon',
+      'Tue',
+      'Wed',
+      'Thu',
+      'Fri',
+      'Sat',
+      'Sun',
+    ];
+  }
+
+  List<String> get categories {
+    return [
+      'Barber',
+      'Hairdresser',
+      'Makeup artist',
+      'Nail technician',
+      'Spa',
+    ];
+  }
+
+  /*
+  * Helper functions
+  * */
+
+  Map<String, bool> currentDevice(BuildContext context){
+    bool isMobile = MediaQuery.of(context).size.width < 650;
+
+    bool isTablet =
+    MediaQuery.of(context).size.width < 1100 &&
+        MediaQuery.of(context).size.width >= 650;
+
+    bool isDesktop =
+    MediaQuery.of(context).size.width >= 1100;
+
+    return {
+      'isMobile': isMobile,
+      'isTablet': isTablet,
+      'isDesktop': isDesktop,
+    };
+  }
+
+  Map<String, List<String>> cities() {
+    return {
+      'Kwa-Zulu Natal': ['Durban']
+    };
+  }
+
   String twoDigitWholeNumber(int number) {
     return number.abs() < 10 ? '0$number' : number.toString();
   }
@@ -94,8 +155,7 @@ class Utils {
       };
     }
 
-    double totalRating =
-        ratings!.fold(0, (total, rating) {
+    double totalRating = ratings!.fold(0, (total, rating) {
       return total += rating.rate;
     });
     ratingPercentage = totalRating / (5 * ratings.length) * 100;
@@ -197,28 +257,6 @@ class Utils {
     return nailTechnicianBookingMadePayloadId;
   }
 
-  List<String> weekDays() {
-    return [
-      'Mon',
-      'Tue',
-      'Wed',
-      'Thu',
-      'Fri',
-      'Sat',
-      'Sun',
-    ];
-  }
-
-  List<String> categories() {
-    return [
-      'Barber',
-      'Hairdresser',
-      'Makeup artist',
-      'Nail technician',
-      'Spa',
-    ];
-  }
-
   Future<Widget> getImage(String url) async {
     final Completer<Widget> completer = Completer();
     final image = NetworkImage(url);
@@ -251,47 +289,54 @@ class Utils {
     return explorerSearch;
   }
 
-  bool canBook({
-    bool inHouse = false,
-    required String serviceCallAddress,
-    required String selectedTime,
-    required String selectedStaffer,
-  }) {
-    return (inHouse &&
-            serviceCallAddress != 'none' &&
-            selectedTime != 'none' &&
-            selectedStaffer != 'none') ||
-        (!inHouse &&
-            serviceCallAddress == 'none' &&
-            selectedTime != 'none' &&
-            selectedStaffer != 'none');
+  bool canBook() {
+    BookController bookController = Get.find();
+    return (bookController.inHouse &&
+            bookController.serviceCallAddress != 'none' &&
+            bookController.selectedTime != 'none' &&
+            bookController.selectedStaffer != 'none') ||
+        (!bookController.inHouse &&
+            bookController.serviceCallAddress == 'none' &&
+            bookController.selectedTime != 'none' &&
+            bookController.selectedStaffer != 'none');
   }
 
-  bool canSelectTime({
-    DateTime? selectedDay,
-    required List<DayTime> dayTimes,
-  }) {
-    String day = selectedDay != null
-        ? DateFormat.yMEd().add_jms().format(selectedDay).split(',')[0]
+  bool canSelectTime() {
+    BookController bookController = Get.find();
+    ProviderController providerController = Get.find();
+
+    List<DayTime> dayTimes = providerController.provider.dayTimes ?? [];
+
+    String day = bookController.selectedDay != DateTime.now()
+        ? DateFormat.yMEd()
+            .add_jms()
+            .format(bookController.selectedDay)
+            .split(',')[0]
         : '';
-    List activeDays =
-        dayTimes.where((dayTime) => mapDayToString(dayTime.day.day) == day).toList();
+    List activeDays = dayTimes
+        .where((dayTime) => mapDayToString(dayTime.day.day) == day)
+        .toList();
     return activeDays.isNotEmpty;
   }
 
-  bool canSelectStaff({
-    bool inHouse = false,
-    String? serviceCallAddress,
-    String? selectedTime,
-  }) {
-    return (inHouse && serviceCallAddress != 'none' && selectedTime != 'none') ||
-        (!inHouse && serviceCallAddress == 'none' && selectedTime != 'none');
+  bool canSelectStaff() {
+    BookController bookController = Get.find();
+
+    if (bookController.inHouse) {
+      return bookController.serviceCallAddress != 'none' &&
+          bookController.selectedTime != 'none';
+    }
+
+    return bookController.serviceCallAddress == 'none' &&
+        bookController.selectedTime != 'none';
   }
 
   Color bookingStatusColor(BookingStatus status) {
     switch (status) {
       case BookingStatus.active:
         return Colors.green;
+      case BookingStatus.done:
+        return Colors.blue;
       case BookingStatus.pending:
         return Colors.orange;
       case BookingStatus.cancelled:
@@ -309,7 +354,7 @@ class Utils {
     } else if (role == 'Provider') {
       return ProviderScreen();
     }
-    return ExploreScreen();
+    return const ExploreScreen();
   }
 
   String navigateToHome(String role) {
@@ -321,7 +366,7 @@ class Utils {
     return ExploreScreen.routeName;
   }
 
-  BookingStatus mapBookingStatus(String status){
+  BookingStatus mapBookingStatus(String status) {
     switch (status) {
       case 'Active':
         return BookingStatus.active;
@@ -338,7 +383,7 @@ class Utils {
     }
   }
 
-  String mapBookingStatusToString(BookingStatus status){
+  String mapBookingStatusToString(BookingStatus status) {
     switch (status) {
       case BookingStatus.active:
         return 'Active';
@@ -355,7 +400,7 @@ class Utils {
     }
   }
 
-  BusinessDay mapDay(String day){
+  BusinessDay mapDay(String day) {
     switch (day) {
       case 'Mon':
         return BusinessDay.mon;
@@ -376,24 +421,30 @@ class Utils {
     }
   }
 
-  String mapDayToString(BusinessDay day){
+  String mapDayToString(BusinessDay day) {
     switch (day) {
-      case BusinessDay.mon :
+      case BusinessDay.mon:
         return 'Mon';
-      case BusinessDay.tue :
+      case BusinessDay.tue:
         return 'Tue';
-      case BusinessDay.wed :
+      case BusinessDay.wed:
         return 'Wed';
-      case BusinessDay.thu :
+      case BusinessDay.thu:
         return 'Thu';
-      case BusinessDay.fri :
+      case BusinessDay.fri:
         return 'Fri';
-      case BusinessDay.sat :
+      case BusinessDay.sat:
         return 'Sat';
-      case BusinessDay.sun :
+      case BusinessDay.sun:
         return 'Sun';
       default:
         return '';
     }
+  }
+
+  String prettyJson(dynamic json) {
+    var spaces = ' ' * 2;
+    var encoder = JsonEncoder.withIndent(spaces);
+    return encoder.convert(json);
   }
 }

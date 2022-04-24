@@ -29,7 +29,6 @@ class Time extends StatelessWidget {
         );
       },
       child: Row(
-
         mainAxisAlignment: MainAxisAlignment.start,
         children: [
           Icon(
@@ -40,7 +39,11 @@ class Time extends StatelessWidget {
             width: 10.0,
           ),
           AutoSizeText(
-            selectedTime ?? label,
+            selectedTime != null
+                ? selectedTime!.isEmpty
+                    ? label
+                    : selectedTime!
+                : label,
             softWrap: true,
             style: const TextStyle(fontSize: 16.0),
           ),

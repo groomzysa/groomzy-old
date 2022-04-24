@@ -2,8 +2,8 @@ import 'package:auto_size_text/auto_size_text.dart';
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:get/get.dart';
-import 'package:get/get_rx/src/rx_types/rx_types.dart';
 import 'package:groomzy/controller/explore_controller.dart';
+import 'package:groomzy/utils/utils.dart';
 
 class AndroidCategory extends StatelessWidget {
   final String imageAssetPath;
@@ -21,8 +21,19 @@ class AndroidCategory extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    Map<String, bool> currentDevice = Utils().currentDevice(context);
+
+    double categoryWidth(){
+      if(currentDevice['isTablet']!){
+        return MediaQuery.of(context).size.width * 0.25;
+      } else if(currentDevice['isDesktop']!){
+        return MediaQuery.of(context).size.width * 0.15;
+      }
+
+      return MediaQuery.of(context).size.width * 0.3;
+    }
     return Container(
-      width: 110,
+      width: categoryWidth(),
       margin: const EdgeInsets.only(right: 5.0),
       child: Obx(() {
         return GestureDetector(
@@ -32,18 +43,24 @@ class AndroidCategory extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.start,
               children: [
                 CircleAvatar(
-                  radius: 40.0,
-                  backgroundColor: active
-                      ? exploreController.category == category
+                  radius: 45,
+                  backgroundColor:
+                      active && exploreController.category == category
                           ? Theme.of(context).primaryColor
-                          : Colors.white10
-                      : Colors.black12,
-                  child: Image.asset(
-                    imageAssetPath,
-                    height: 50.0,
-                    color: exploreController.category == category
-                        ? Colors.white
-                        : Colors.black54,
+                          : Colors.white10,
+                  child: CircleAvatar(
+                    radius: 40.0,
+                    backgroundColor:
+                        active && exploreController.category == category
+                            ? Colors.white
+                            : Colors.white10,
+                    child: Image.asset(
+                      imageAssetPath,
+                      height: 50.0,
+                      color: exploreController.category == category
+                          ? Theme.of(context).primaryColor
+                          : Colors.black54,
+                    ),
                   ),
                 ),
                 AutoSizeText(

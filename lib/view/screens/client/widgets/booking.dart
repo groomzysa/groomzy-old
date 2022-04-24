@@ -1,43 +1,77 @@
 import 'package:flutter/material.dart';
-import 'package:graphql_flutter/graphql_flutter.dart';
-import 'package:groomzy/api/graphql/mutations/client/book_cancel.dart';
-import 'package:groomzy/api/graphql/mutations/client/book_delete.dart';
+import 'package:get/get.dart';
+import 'package:groomzy/api/graphql/mutations/client/booking_cancel_mutation.dart';
+import 'package:groomzy/api/graphql/mutations/client/booking_delete_mutation.dart';
+import 'package:groomzy/api/graphql/mutations/client/booking_rate_mutation.dart';
+import 'package:groomzy/controller/book_controller.dart';
+import 'package:groomzy/model/booking.dart' as booking_model;
 import 'package:groomzy/utils/enums.dart';
 import 'package:groomzy/utils/utils.dart';
 import 'package:groomzy/view/screens/client/widgets/booking_details.dart';
+import 'package:groomzy/view/screens/client/widgets/rating.dart';
 import 'package:groomzy/view/widgets/alert_dialog/alert_dialog.dart';
 import 'package:groomzy/view/widgets/loading/loading.dart';
 import 'package:groomzy/view/widgets/table/table_cell.dart';
 import 'package:groomzy/view/widgets/table/table_header.dart';
+import 'package:intl/intl.dart';
 
 class Booking extends StatelessWidget {
-  final int bookingId;
-  final String provider;
-  final String bookingDate;
-  final String bookingTime;
-  final BookingStatus bookingStatus;
-  final String bookingDurationUnit;
-  final double bookingDuration;
-  final bool inHouse;
-  final Map service;
-  final Function refetchQuery;
+  final booking_model.Booking booking;
 
-  const Booking({
-    required this.bookingId,
-    required this.provider,
-    required this.bookingDate,
-    required this.bookingTime,
-    required this.bookingStatus,
-    required this.bookingDurationUnit,
-    required this.bookingDuration,
-    required this.inHouse,
-    required this.service,
-    required this.refetchQuery,
+  Booking({
+    required this.booking,
     Key? key,
   }) : super(key: key);
 
+  final BookController bookController = Get.find();
+
   @override
   Widget build(BuildContext context) {
+    Future<void> _submit() async {
+      try {
+        Map<String, dynamic> response = {'status': false};
+        if (bookController.cancel) {
+          response =
+              await ClientBookingCancelMutation().clientBookingCancelMutation();
+        } else if (bookController.delete) {
+          response =
+              await ClientBookingDeleteMutation().clientBookingDeleteMutation();
+        } else if (bookController.rate) {
+          response =
+              await ClientBookingRateMutation().clientBookingRateMutation();
+        }
+
+        if (response['status']!) {
+          showDialog(
+            barrierDismissible: false,
+            context: context,
+            builder: (BuildContext context) {
+              return AndroidAlertDialog(
+                title: 'Info',
+                message: Text(
+                  response['message'],
+                ),
+                popTimes: 2,
+              );
+            },
+          );
+        }
+      } catch (err) {
+        showDialog(
+          context: context,
+          builder: (BuildContext context) {
+            return AndroidAlertDialog(
+              title: 'Oops!',
+              message: Text(
+                '$err',
+              ),
+              popTimes: 2,
+            );
+          },
+        );
+      }
+    }
+
     return Card(
       color: Colors.grey.shade50,
       elevation: 1,
@@ -46,7 +80,7 @@ class Booking extends StatelessWidget {
           const Divider(height: 0),
           ListTile(
             title: const Text('Provided by:'),
-            subtitle: Text(provider),
+            subtitle: Text(booking.provider?.fullName ?? ''),
             trailing: Container(
               margin: const EdgeInsets.only(top: 10.0),
               child: Column(
@@ -55,9 +89,10 @@ class Booking extends StatelessWidget {
                 children: [
                   const Text('Status:'),
                   Text(
-                    Utils().mapBookingStatusToString(bookingStatus),
+                    Utils().mapBookingStatusToString(booking.status),
                     style: TextStyle(
-                        color: Utils().bookingStatusColor(bookingStatus)),
+                      color: Utils().bookingStatusColor(booking.status),
+                    ),
                   )
                 ],
               ),
@@ -87,10 +122,16 @@ class Booking extends StatelessWidget {
                 ),
                 TableRow(
                   children: [
-                    TableValue(value: service['title']),
-                    TableValue(value: bookingDate),
+                    TableValue(value: booking.service.title),
                     TableValue(
-                      value: '$bookingTime hrz',
+                      value: DateFormat.yMEd().format(
+                        booking.bookingTime,
+                      ),
+                    ),
+                    TableValue(
+                      value: '${DateFormat.Hm().format(
+                        booking.bookingTime,
+                      )} hrz',
                     ),
                   ],
                 ),
@@ -111,18 +152,7 @@ class Booking extends StatelessWidget {
                         context: context,
                         builder: (context) {
                           return Dialog(
-                            child: BookingDetails(
-                              provider: provider,
-                              title: service['title'],
-                              bookingDate: bookingDate,
-                              bookingTime: '$bookingTime hrz',
-                              bookingStatus: bookingStatus,
-                              bookingDuration:
-                                  '$bookingDuration $bookingDurationUnit',
-                              inHouse: inHouse ? 'Yes' : 'No',
-                              bookingPrice:
-                                  'R ${double.parse(service['price'].toString()).toStringAsFixed(2)}',
-                            ),
+                            child: BookingDetails(booking: booking),
                           );
                         },
                       );
@@ -133,13 +163,64 @@ class Booking extends StatelessWidget {
                         children: const [
                           Icon(
                             Icons.remove_red_eye_outlined,
-                            color: Colors.blue,
+                            color: Colors.blueGrey,
                           ),
                           Text('View'),
                         ],
                       ),
                     ),
                   ),
+                  const VerticalDivider(),
+                  Obx(() {
+                    if (bookController.id == booking.id &&
+                        bookController.rate &&
+                        bookController.isLoading) {
+                      return const AndroidLoading();
+                    } else {
+                      return GestureDetector(
+                        onTap: () async {
+                          showDialog(
+                            context: context,
+                            builder: (context) {
+                              return Dialog(
+                                child: Rating(
+                                  booking: booking,
+                                  submit: _submit,
+                                ),
+                              );
+                            },
+                          );
+                        },
+                        child: SizedBox(
+                          height: 40.0,
+                          child: Column(
+                            children: [
+                              Icon(
+                                Icons.star_half_outlined,
+                                color: [
+                                  BookingStatus.done,
+                                  BookingStatus.cancelled
+                                ].contains(booking.status)
+                                    ? Colors.lightGreen
+                                    : Colors.black12,
+                              ),
+                              Text(
+                                'Rate',
+                                style: TextStyle(
+                                  color: [
+                                    BookingStatus.done,
+                                    BookingStatus.cancelled
+                                  ].contains(booking.status)
+                                      ? null
+                                      : Colors.black12,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    }
+                  }),
                   /* Edit will be done post MVP */
                   // const VerticalDivider(),
                   // GestureDetector(
@@ -160,72 +241,19 @@ class Booking extends StatelessWidget {
                   //   ),
                   // ),
                   const VerticalDivider(),
-                  Mutation(
-                    options: MutationOptions(
-                      document:
-                          gql(ClientBookCancelMutation().clientBookCancel),
-                      update: (
-                        GraphQLDataProxy? cache,
-                        QueryResult? result,
-                      ) {
-                        if (result!.hasException) {
-                          String errMessage =
-                              result.exception!.graphqlErrors[0].message;
-                          showDialog(
-                            context: context,
-                            builder: (BuildContext context) {
-                              return AndroidAlertDialog(
-                                title: 'Error',
-                                message: Text(
-                                  errMessage,
-                                  style: const TextStyle(
-                                    color: Colors.redAccent,
-                                  ),
-                                ),
-                              );
-                            },
-                          );
-                        }
-                      },
-                      onCompleted: (dynamic clientBookCancelResult) async {
-                        if (clientBookCancelResult != null) {
-                          String message =
-                              clientBookCancelResult['clientBookCancel']
-                                  ['message'];
-                          if (message.isNotEmpty) {
-                            showDialog(
-                              context: context,
-                              builder: (BuildContext context) {
-                                return AndroidAlertDialog(
-                                  title: 'Completed',
-                                  message: Text(
-                                    message,
-                                    style: const TextStyle(
-                                      color: Colors.lightGreen,
-                                    ),
-                                  ),
-                                );
-                              },
-                            );
-                          }
-                          refetchQuery();
-                        }
-                      },
-                    ),
-                    builder: (
-                      RunMutation? runClientBookCancelMutation,
-                      QueryResult? clientBookCancelResult,
-                    ) {
-                      if (clientBookCancelResult!.isLoading) {
-                        return const AndroidLoading();
-                      }
+                  Obx(() {
+                    if (bookController.id == booking.id &&
+                        bookController.cancel &&
+                        bookController.isLoading) {
+                      return const AndroidLoading();
+                    } else {
                       return GestureDetector(
                         onTap: () async {
-                          if ([BookingStatus.active, BookingStatus.pending].contains(bookingStatus)) {
-                            runClientBookCancelMutation!({
-                              'bookingId': bookingId,
-                              'cancel': true,
-                            });
+                          if ([BookingStatus.active, BookingStatus.pending]
+                              .contains(booking.status)) {
+                            bookController.id = booking.id;
+                            bookController.cancel = true;
+                            _submit();
                           }
                         },
                         child: SizedBox(
@@ -234,17 +262,21 @@ class Booking extends StatelessWidget {
                             children: [
                               Icon(
                                 Icons.cancel_outlined,
-                                color: [BookingStatus.active, BookingStatus.pending]
-                                        .contains(bookingStatus)
+                                color: [
+                                  BookingStatus.active,
+                                  BookingStatus.pending
+                                ].contains(booking.status)
                                     ? Colors.redAccent
                                     : Colors.black12,
                               ),
                               Text(
                                 'Cancel',
                                 style: TextStyle(
-                                  color: [BookingStatus.active, BookingStatus.pending]
-                                          .contains(bookingStatus)
-                                      ? Colors.redAccent
+                                  color: [
+                                    BookingStatus.active,
+                                    BookingStatus.pending
+                                  ].contains(booking.status)
+                                      ? null
                                       : Colors.black12,
                                 ),
                               ),
@@ -252,97 +284,49 @@ class Booking extends StatelessWidget {
                           ),
                         ),
                       );
-                    },
-                  ),
+                    }
+                  }),
                   const VerticalDivider(),
-                  Mutation(
-                    options: MutationOptions(
-                      document: gql(
-                        ClientBookDeleteMutation().clientBookDelete,
-                      ),
-                      update: (
-                        GraphQLDataProxy? cache,
-                        QueryResult? result,
-                      ) {
-                        if (result!.hasException) {
-                          String errMessage =
-                              result.exception!.graphqlErrors[0].message;
-                          showDialog(
-                            context: context,
-                            builder: (BuildContext context) {
-                              return AndroidAlertDialog(
-                                title: 'Error',
-                                message: Text(
-                                  errMessage,
-                                  style: const TextStyle(
-                                    color: Colors.redAccent,
+                  Obx(
+                    () {
+                      if (bookController.id == booking.id &&
+                          bookController.delete &&
+                          bookController.isLoading) {
+                        return const AndroidLoading();
+                      } else {
+                        return GestureDetector(
+                          onTap: () {
+                            if (booking.status == BookingStatus.cancelled) {
+                              bookController.id = booking.id;
+                              bookController.delete = true;
+                              _submit();
+                            }
+                          },
+                          child: SizedBox(
+                            height: 40.0,
+                            child: Column(
+                              children: [
+                                Icon(
+                                  Icons.delete_forever_outlined,
+                                  color:
+                                      booking.status == BookingStatus.cancelled
+                                          ? Colors.redAccent
+                                          : Colors.black12,
+                                ),
+                                Text(
+                                  'Delete',
+                                  style: TextStyle(
+                                    color: booking.status ==
+                                            BookingStatus.cancelled
+                                        ? null
+                                        : Colors.black12,
                                   ),
                                 ),
-                              );
-                            },
-                          );
-                        }
-                      },
-                      onCompleted: (dynamic clientBookDeleteResult) async {
-                        if (clientBookDeleteResult != null) {
-                          String message =
-                              clientBookDeleteResult['clientBookDelete']
-                                  ['message'];
-                          if (message.isNotEmpty) {
-                            showDialog(
-                              context: context,
-                              builder: (BuildContext context) {
-                                return AndroidAlertDialog(
-                                  title: 'Completed',
-                                  message: Text(
-                                    message,
-                                    style: const TextStyle(
-                                      color: Colors.lightGreen,
-                                    ),
-                                  ),
-                                );
-                              },
-                            );
-                          }
-                          refetchQuery();
-                        }
-                      },
-                    ),
-                    builder: (
-                      RunMutation? runClientBookDeleteMutation,
-                      QueryResult? clientBookDeleteResult,
-                    ) {
-                      return GestureDetector(
-                        onTap: () {
-                          if (bookingStatus == BookingStatus.cancelled) {
-                            runClientBookDeleteMutation!({
-                              'bookingId': bookingId,
-                              'delete': true,
-                            });
-                          }
-                        },
-                        child: SizedBox(
-                          height: 40.0,
-                          child: Column(
-                            children: [
-                              Icon(
-                                Icons.delete_forever_outlined,
-                                color: bookingStatus ==  BookingStatus.cancelled
-                                    ? Colors.redAccent
-                                    : Colors.black12,
-                              ),
-                              Text(
-                                'Delete',
-                                style: TextStyle(
-                                  color: bookingStatus ==  BookingStatus.cancelled
-                                      ? Colors.redAccent
-                                      : Colors.black12,
-                                ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
-                        ),
-                      );
+                        );
+                      }
                     },
                   ),
                 ],

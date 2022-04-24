@@ -10,7 +10,7 @@ class BookingOperationalDays extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    List weekDays = Utils().weekDays();
+    List weekDays = Utils().weekDays;
     dayTimes.sort(
       (a, b) =>
           weekDays.indexOf(a.day) - weekDays.indexOf(b.day),

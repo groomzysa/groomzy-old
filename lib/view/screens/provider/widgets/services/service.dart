@@ -1,29 +1,22 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import 'package:groomzy/controller/service_controller.dart';
+import 'package:groomzy/model/category.dart';
 import 'package:groomzy/view/screens/provider/widgets/services/delete_service.dart';
 import 'package:groomzy/view/screens/provider/widgets/services/edit_service.dart';
-
+import 'package:groomzy/model/service.dart' as service_model;
 
 class Service extends StatelessWidget {
-  final String name;
-  final String category;
-  final String description;
-  final double price;
-  final int serviceId;
-  final bool inHouse;
-  final double duration;
-  final String durationUnit;
+  final service_model.Service service;
+  final Category category;
 
-  const Service({
-    required this.price,
-    required this.name,
-    required this.description,
+  Service({
+    required this.service,
     required this.category,
-    required this.serviceId,
-    required this.inHouse,
-    required this.duration,
-    required this.durationUnit,
     Key? key,
   }) : super(key: key);
+
+  final ServiceController serviceController = Get.find();
 
   @override
   Widget build(BuildContext context) {
@@ -32,9 +25,15 @@ class Service extends StatelessWidget {
       elevation: 0.5,
       child: Column(
         children: [
-          const Divider(height: 0.0,),
+          const Divider(
+            height: 0.0,
+          ),
           Container(
-            margin: const EdgeInsets.only(left: 10.0, right: 10.0, bottom: 10.0,),
+            margin: const EdgeInsets.only(
+              left: 10.0,
+              right: 10.0,
+              bottom: 10.0,
+            ),
             child: ListTile(
               contentPadding: EdgeInsets.zero,
               subtitle: Table(
@@ -86,22 +85,22 @@ class Service extends StatelessWidget {
                   TableRow(children: [
                     TableCell(
                       child: Text(
-                        name,
+                        service.title,
                       ),
                     ),
                     TableCell(
                       child: Text(
-                        'R$price',
+                        'R${service.price}',
                       ),
                     ),
                     TableCell(
                       child: Text(
-                        '$duration $durationUnit',
+                        '${service.duration} ${service.durationUnit}',
                       ),
                     ),
                     TableCell(
                       child: Text(
-                        inHouse ? 'Yes' : 'No',
+                        service.inHouse ? 'Yes' : 'No',
                       ),
                     ),
                   ])
@@ -115,20 +114,20 @@ class Service extends StatelessWidget {
                   children: [
                     GestureDetector(
                       onTap: () {
+                        serviceController.id = service.id;
+                        serviceController.title = service.title;
+                        serviceController.description = service.description;
+                        serviceController.duration = service.duration;
+                        serviceController.durationUnit = service.durationUnit;
+                        serviceController.inHouse = service.inHouse;
+                        serviceController.price = service.price;
+                        serviceController.category = category.category;
+
                         showDialog(
                           context: context,
                           builder: (context) {
                             return Dialog(
-                              child: EditService(
-                                serviceId: serviceId,
-                                title: name,
-                                category: category,
-                                description: description,
-                                duration: duration,
-                                durationUnit: durationUnit,
-                                inHouse: inHouse,
-                                price: price,
-                              ),
+                              child: EditService(),
                             );
                           },
                         );
@@ -141,13 +140,13 @@ class Service extends StatelessWidget {
                     const VerticalDivider(),
                     GestureDetector(
                       onTap: () {
+                        serviceController.id = service.id;
+                        serviceController.category = category.category;
+
                         showDialog(
                           context: context,
                           builder: (context) {
-                            return DeleteService(
-                              serviceId: serviceId,
-                              category: category,
-                            );
+                            return DeleteService();
                           },
                         );
                       },
@@ -161,7 +160,9 @@ class Service extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(height: 10.0,)
+          const SizedBox(
+            height: 10.0,
+          )
         ],
       ),
     );

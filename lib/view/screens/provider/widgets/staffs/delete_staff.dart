@@ -1,100 +1,70 @@
 import 'package:flutter/material.dart';
-import 'package:graphql_flutter/graphql_flutter.dart';
-import 'package:groomzy/api/graphql/mutations/staff/delete_staff.dart';
+import 'package:get/get.dart';
+import 'package:groomzy/api/graphql/mutations/provider/staff/delete_staff_mutation.dart';
+import 'package:groomzy/controller/staff_controller.dart';
 import 'package:groomzy/view/widgets/alert_dialog/alert_dialog.dart';
 import 'package:groomzy/view/widgets/loading/loading.dart';
 
 class DeleteStaff extends StatelessWidget {
-  final int staffId;
+  DeleteStaff({Key? key}) : super(key: key);
 
-  const DeleteStaff({required this.staffId, Key? key}) : super(key: key);
+  final StaffController staffController = Get.find();
 
   @override
   Widget build(BuildContext context) {
-    Future<void> _submit(
-        {MultiSourceResult Function(Map<String, dynamic>,
-                {Object? optimisticResult})?
-            deleteStaff}) async {
-      deleteStaff!({
-        'staffId': staffId,
-      });
+    Future<void> _submit() async {
+      try {
+        Map<String, dynamic> response =
+            await DeleteStaffMutation().deleteStaffMutation();
+        if (response['status']!) {
+          Get.back();
+          showDialog(
+            barrierDismissible: false,
+            context: context,
+            builder: (BuildContext context) {
+              return AndroidAlertDialog(
+                title: 'Info',
+                message: Text(
+                  response['message'],
+                ),
+                popTimes: 2,
+              );
+            },
+          );
+        }
+      } catch (err) {
+        showDialog(
+          context: context,
+          builder: (BuildContext context) {
+            return AndroidAlertDialog(
+              title: 'Oops!',
+              message: Text(
+                '$err',
+              ),
+            );
+          },
+        );
+      }
     }
 
     return AlertDialog(
-      title: const Text('Please confirm'),
+      title: const Text('Confirm'),
       content: const Text('Are you sure want to delete staff?'),
       actions: <Widget>[
-        Mutation(
-          options: MutationOptions(
-            document: gql(
-              DeleteStaffMutation().deleteStaff,
+        Obx(() {
+          if (staffController.isLoading) {
+            return const AndroidLoading();
+          }
+          return TextButton(
+            child: const Text(
+              'Delete',
+              style: TextStyle(color: Colors.redAccent),
             ),
-            update: (
-              GraphQLDataProxy? cache,
-              QueryResult? result,
-            ) {
-              if (result!.hasException) {
-                String errMessage =
-                    result.exception!.graphqlErrors[0].toString();
-                showDialog(
-                  context: context,
-                  builder: (BuildContext context) {
-                    return AndroidAlertDialog(
-                      title: 'Error',
-                      message: Text(
-                        errMessage,
-                        style: const TextStyle(
-                          color: Colors.redAccent,
-                        ),
-                      ),
-                      popTimes: 2,
-                    );
-                  },
-                );
-              }
+            onPressed: () {
+              _submit();
             },
-            onCompleted: (dynamic deleteStaffResult) async {
-              if (deleteStaffResult != null) {
-                String message = deleteStaffResult['deleteStaff']['message'];
-                if (message.isNotEmpty) {
-                  showDialog(
-                    context: context,
-                    builder: (BuildContext context) {
-                      return AndroidAlertDialog(
-                        title: 'Completed',
-                        message: Text(
-                          message,
-                          style: const TextStyle(
-                            color: Colors.lightGreen,
-                          ),
-                        ),
-                        popTimes: 2,
-                      );
-                    },
-                  );
-                }
-              }
-            },
-          ),
-          builder: (
-            RunMutation? runDeleteStaffMutation,
-            QueryResult? deleteStaffResult,
-          ) {
-            if (deleteStaffResult!.isLoading) {
-              return const AndroidLoading();
-            }
-
-            return TextButton(
-              child: const Text(
-                'Delete',
-                style: TextStyle(color: Colors.redAccent),
-              ),
-              onPressed: () {
-                _submit(deleteStaff: runDeleteStaffMutation);
-              },
-            );
-          },
-        ),
+          );
+        }),
         TextButton(
           child: const Text(
             'Cancel',

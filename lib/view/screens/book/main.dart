@@ -10,11 +10,12 @@ class BookScreen extends StatelessWidget {
   static final String routeName =
       '/${bookTitle.toLowerCase().replaceAll(' ', '')}';
 
-  BookScreen({Key? key}) : super(key: key);
-  final BookController bookController =  Get.put(BookController());
+  const BookScreen({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
+    Get.put(BookController());
+
     return Scaffold(
       appBar: AndroidAppBar(
         title: bookTitle,

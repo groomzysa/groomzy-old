@@ -1,100 +1,66 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:graphql_flutter/graphql_flutter.dart';
-import 'package:groomzy/api/graphql/mutations/staff/edit_staff.dart';
-import 'package:groomzy/controller/provider_controller.dart';
+import 'package:groomzy/api/graphql/mutations/provider/staff/edit_staff_mutation.dart';
+import 'package:groomzy/controller/staff_controller.dart';
 import 'package:groomzy/view/widgets/alert_dialog/alert_dialog.dart';
 import 'package:groomzy/view/widgets/button/button.dart';
 import 'package:groomzy/view/widgets/loading/loading.dart';
 import 'package:groomzy/view/widgets/text_field/text_field.dart';
 
 class EditStaff extends StatelessWidget {
-  final int staffId;
-  final String fullName;
-
-  EditStaff({
-    required this.staffId,
-    required this.fullName,
-    Key? key,
-  }) : super(key: key);
+  EditStaff({Key? key}) : super(key: key);
 
   final GlobalKey<FormState> formKey = GlobalKey<FormState>();
-  final ProviderController providerController = Get.find();
+  final StaffController staffController = Get.find();
 
   @override
   Widget build(BuildContext context) {
-    Future<void> _submit(
-        {MultiSourceResult Function(Map<String, dynamic>,
-                {Object? optimisticResult})?
-            editStaff}) async {
+    Future<void> _submit() async {
       if (!formKey.currentState!.validate()) {
         return;
       }
       formKey.currentState!.save();
 
-      editStaff!({
-        'staffId': staffId,
-        'fullName': '_fullName.value',
-      });
+      try {
+        Map<String, dynamic> response =
+            await EditStaffMutation().editStaffMutation();
+        if (response['status']!) {
+          showDialog(
+            barrierDismissible: false,
+            context: context,
+            builder: (BuildContext context) {
+              return AndroidAlertDialog(
+                title: 'Info',
+                message: Text(
+                  response['message'],
+                ),
+                popTimes: 2,
+              );
+            },
+          );
+        }
+      } catch (err) {
+        showDialog(
+          context: context,
+          builder: (BuildContext context) {
+            return AndroidAlertDialog(
+              title: 'Oops!',
+              message: Text(
+                '$err',
+              ),
+              popTimes: 2,
+            );
+          },
+        );
+      }
     }
 
-    return Mutation(
-      options: MutationOptions(
-        document: gql(EditStaffMutation().editStaff),
-        update: (
-          GraphQLDataProxy? cache,
-          QueryResult? result,
-        ) {
-          if (result!.hasException) {
-            String errMessage = result.exception!.graphqlErrors[0].message;
-            showDialog(
-              context: context,
-              builder: (BuildContext context) {
-                return AndroidAlertDialog(
-                  title: 'Error',
-                  message: Text(
-                    errMessage,
-                    style: const TextStyle(
-                      color: Colors.redAccent,
-                    ),
-                  ),
-                  popTimes: 2,
-                );
-              },
-            );
-          }
-        },
-        onCompleted: (dynamic editStaffResult) async {
-          if (editStaffResult != null) {
-            String message = editStaffResult['editStaff']['message'];
-            if (message.isNotEmpty) {
-              showDialog(
-                context: context,
-                builder: (BuildContext context) {
-                  return AndroidAlertDialog(
-                    title: 'Completed',
-                    message: Text(
-                      message,
-                      style: const TextStyle(
-                        color: Colors.lightGreen,
-                      ),
-                    ),
-                    popTimes: 2,
-                  );
-                },
-              );
-            }
-          }
-        },
-      ),
-      builder: (
-        RunMutation? runEditStaffMutation,
-        QueryResult? editStaffResult,
-      ) {
-        if (editStaffResult!.isLoading) {
-          return const AndroidLoading();
-        }
-        return Form(
+    return Obx(() {
+      if (staffController.isLoading) {
+        return const AndroidLoading();
+      }
+      return SingleChildScrollView(
+        child: Form(
           key: formKey,
           child: Container(
             constraints: const BoxConstraints(
@@ -122,25 +88,26 @@ class EditStaff extends StatelessWidget {
                   ),
                   const SizedBox(height: 10.0),
                   AndroidTextField(
-                    value: '_fullName.value' ?? fullName,
-                    label: 'title',
+                    value: staffController.fullName,
+                    label: 'Full name',
                     onInputChange: (String input) {
-                      // _fullName.value = input;
+                      staffController.fullName = input;
                     },
                   ),
+                  const SizedBox(height: 10.0),
                   AndroidButton(
                     label: 'Edit',
                     backgroundColor: Theme.of(context).primaryColor,
                     pressed: () {
-                      _submit(editStaff: runEditStaffMutation);
+                      _submit();
                     },
                   ),
                 ],
               ),
             ),
           ),
-        );
-      },
-    );
+        ),
+      );
+    });
   }
 }

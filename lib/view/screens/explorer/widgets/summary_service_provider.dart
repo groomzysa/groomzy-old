@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:groomzy/controller/provider_controller.dart';
-import 'package:groomzy/controller/provider_trading_controller.dart';
 import 'package:groomzy/model/address.dart';
 import 'package:groomzy/model/provider.dart';
 import 'package:map_launcher/map_launcher.dart';
+import 'package:maps_launcher/maps_launcher.dart';
 
 import 'package:groomzy/controller/summary_service_provider_controller.dart';
 import 'package:groomzy/utils/constants.dart';
@@ -29,8 +29,29 @@ class AndroidSummaryService extends StatelessWidget {
     Address? address = provider.address;
     Map providerRating = Utils().providerRating(provider.ratings);
 
+    bool hasAddress() {
+      if (address == null) {
+        return false;
+      }
+      if (address.streetNumber == null ||
+          address.streetName == null ||
+          address.suburbName == null ||
+          address.cityName == null ||
+          address.provinceName == null ||
+          address.areaCode == null ||
+          address.latitude == null ||
+          address.longitude == null) {
+        return false;
+      }
+      return true;
+    }
+
     return FutureBuilder(
-      future: summaryServiceProviderController.getDistance(address?.address),
+      future: summaryServiceProviderController.getDistance(
+        address?.latitude,
+        address?.longitude,
+          hasAddress()
+      ),
       builder: (context, snapshot) {
         return Column(
           children: <Widget>[
@@ -45,23 +66,32 @@ class AndroidSummaryService extends StatelessWidget {
                         double? longitude = address?.longitude;
 
                         if (latitude != null && longitude != null) {
+                          MapsLauncher.launchCoordinates(latitude, longitude);
+
                           // TODO This should be in the common utils expanding to other map types.
-                          var googleMap =
-                              await MapLauncher.isMapAvailable(MapType.google);
-                          if (googleMap != null && googleMap) {
-                            await MapLauncher.showDirections(
-                              mapType: MapType.google,
-                              destination: Coords(latitude, longitude),
-                              destinationTitle: address?.address ?? '',
-                            );
-                          }
+                          // var googleMap =
+                          //     await MapLauncher.isMapAvailable(MapType.google);
+                          // if (googleMap != null && googleMap) {
+                          //   await MapLauncher.showDirections(
+                          //     mapType: MapType.google,
+                          //     destination: Coords(latitude, longitude),
+                          //     destinationTitle: hasAddress()
+                          //         ? '${address?.streetNumber}, ${address?.streetName}, ${address?.suburbName}, ${address?.cityName}, ${address?.provinceName}, ${address?.areaCode}'
+                          //         : '',
+                          //   );
+                          // }
                         }
                       },
                       child: const Icon(Icons.location_on_outlined),
                     ),
-                    title: Text(provider.name!),
-                    subtitle: Text(address?.address ?? 'No address'),
-                    trailing: summaryServiceProviderController.isLoading
+                    title: Text(provider.fullName!),
+                    subtitle: Text(
+                      hasAddress()
+                          ? '${address?.streetNumber}, ${address?.streetName}, ${address?.suburbName}, ${address?.cityName}, ${address?.provinceName}, ${address?.areaCode}'
+                          : '',
+                    ),
+                    trailing: hasAddress() &&
+                            summaryServiceProviderController.isLoading
                         ? SizedBox(
                             height: 20.0,
                             width: 20.0,
@@ -75,7 +105,7 @@ class AndroidSummaryService extends StatelessWidget {
                           ),
                   ),
                   SizedBox(
-                    height: 180,
+                    height: Utils().currentDevice(context)['isDesktop']! ? 300 : 180,
                     width: double.infinity,
                     child: GestureDetector(
                       child: Image.asset(
@@ -84,7 +114,7 @@ class AndroidSummaryService extends StatelessWidget {
                       ),
                       onTap: () {
                         providerController.provider = provider;
-                        Get.put(ProviderTradingController());
+                        providerController.providerId = provider.id!;
                         Get.toNamed(
                           ProviderTradingScreen.routeName,
                         );

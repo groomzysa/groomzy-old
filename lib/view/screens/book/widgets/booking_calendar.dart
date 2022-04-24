@@ -1,28 +1,29 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:groomzy/controller/book_controller.dart';
+import 'package:groomzy/controller/provider_controller.dart';
 import 'package:groomzy/model/day_time.dart';
 import 'package:groomzy/utils/utils.dart';
 import 'package:groomzy/view/widgets/calender/calender.dart';
 import 'package:intl/intl.dart';
 
 class BookingCalendar extends StatelessWidget {
-  final List<DayTime> dayTimes;
-
   BookingCalendar({
-    required this.dayTimes,
-    Key? key,
+    Key? key
   }) : super(key: key);
 
   final BookController bookController = Get.find();
+  final ProviderController providerController = Get.find();
 
   @override
   Widget build(BuildContext context) {
-    return GetBuilder<BookController>(builder: (c) {
+    List<DayTime> dayTimes = providerController.provider.dayTimes!;
+
+    return Obx(() {
       return AndroidCalendar(
-        dateNow: c.dateNow,
-        calendarFormat: c.calendarFormat,
-        selectedDay: c.selectedDay,
+        dateNow: bookController.dateNow,
+        calendarFormat: bookController.calendarFormat,
+        selectedDay: bookController.selectedDay,
         onDaySelected: (DateTime? _selectedDay, focusedDa) {
           if (_selectedDay != null) {
             String day =
@@ -33,15 +34,18 @@ class BookingCalendar extends StatelessWidget {
                 .toList();
 
             if (activeDays.isEmpty) {
-              c.selectedTime = 'none';
+              bookController.selectedTime = 'none';
             }
-            c.selectedDay = _selectedDay;
+            bookController.selectedDay = _selectedDay;
+            bookController.selectedTime = 'none';
+            bookController.selectedStaffer = 'none';
+            bookController.serviceCallAddress = 'none';
           }
         },
         onFormatChanged: (format) {
-          if (c.calendarFormat != format) {
+          if (bookController.calendarFormat != format) {
             // Call `setState()` when updating calendar format
-            c.calendarFormat = format;
+            bookController.calendarFormat = format;
           }
         },
       );

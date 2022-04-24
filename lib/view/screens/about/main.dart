@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:groomzy/utils/constants.dart';
+import 'package:groomzy/utils/utils.dart';
 import 'package:groomzy/view/screens/about/about.dart';
 import 'package:groomzy/view/widgets/app_bar/app_bar.dart';
 import 'package:groomzy/view/widgets/center_horizontal_vertical/center_horizontal_vertical.dart';
@@ -14,7 +15,7 @@ class AboutScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AndroidAppBar(title: aboutTitle,),
-      drawer: AndroidDrawer(),
+      drawer: Utils().currentDevice(context)['isDesktop']! ? null : AndroidDrawer(),
       body: const SafeArea(
         child: AndroidCenterHorizontalVertical(screenContent: About(),),
       ),

@@ -4,6 +4,7 @@ import 'package:groomzy/controller/client_contoller.dart';
 import 'package:groomzy/controller/globals_controller.dart';
 import 'package:groomzy/controller/summary_service_provider_controller.dart';
 import 'package:groomzy/utils/constants.dart';
+import 'package:groomzy/utils/utils.dart';
 import 'package:groomzy/view/screens/client/client.dart';
 import 'package:groomzy/view/screens/explorer/main.dart';
 import 'package:groomzy/view/widgets/alert_dialog/alert_dialog.dart';
@@ -41,7 +42,7 @@ class ClientScreen extends StatelessWidget {
             title:
                 clientController.selectedIndex == 1 ? 'Bookings' : 'Providers',
           ),
-          drawer: AndroidDrawer(),
+          drawer: Utils().currentDevice(context)['isDesktop']! ? null : AndroidDrawer(),
           body: SafeArea(child: Client()),
           bottomNavigationBar: BottomNavigationBar(
             items: const <BottomNavigationBarItem>[

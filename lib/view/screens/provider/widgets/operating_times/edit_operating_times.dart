@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:get/get.dart';
-import 'package:graphql_flutter/graphql_flutter.dart';
-import 'package:groomzy/api/graphql/mutations/operating_time/edit_operating_time.dart';
+import 'package:groomzy/api/graphql/mutations/provider/operating_time/edit_operating_time_mutation.dart';
+import 'package:groomzy/controller/operating_time_controller.dart';
 import 'package:groomzy/controller/provider_controller.dart';
 import 'package:groomzy/view/screens/provider/widgets/operating_times/time.dart';
 import 'package:groomzy/view/widgets/alert_dialog/alert_dialog.dart';
@@ -12,102 +12,60 @@ import 'package:groomzy/view/widgets/text_field/text_field.dart';
 import 'package:intl/intl.dart';
 
 class EditOperatingTime extends StatelessWidget {
-  final int dayTimeId;
-  final String day;
-  final String startTime;
-  final String endTime;
-
-  EditOperatingTime({
-    required this.dayTimeId,
-    required this.day,
-    required this.startTime,
-    required this.endTime,
-    Key? key,
-  }) : super(key: key);
+  EditOperatingTime({Key? key}) : super(key: key);
 
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   final ProviderController providerController = Get.find();
+  final OperatingTimeController operatingTimeController = Get.find();
 
   @override
   Widget build(BuildContext context) {
-    Future<void> _submit(
-        {MultiSourceResult Function(Map<String, dynamic>,
-                {Object? optimisticResult})?
-            editOperatingTime}) async {
+    Future<void> _submit() async {
       if (!_formKey.currentState!.validate()) {
         return;
       }
       _formKey.currentState!.save();
 
-      editOperatingTime!({
-        'dayTimeId': dayTimeId,
-        'day': '_day',
-        'startTime': '_startTime',
-        'endTime': '_endTime',
-      });
+      try {
+        Map<String, dynamic> response =
+            await EditOperatingTimeMutation().editOperatingTimeMutation();
+        if (response['status']!) {
+          showDialog(
+            barrierDismissible: false,
+            context: context,
+            builder: (BuildContext context) {
+              return AndroidAlertDialog(
+                title: 'Info',
+                message: Text(
+                  response['message'],
+                ),
+                popTimes: 2,
+              );
+            },
+          );
+        }
+      } catch (err) {
+        showDialog(
+          context: context,
+          builder: (BuildContext context) {
+            return AndroidAlertDialog(
+              title: 'Oops!',
+              message: Text(
+                '$err',
+              ),
+              popTimes: 2,
+            );
+          },
+        );
+      }
     }
 
-    return Mutation(
-      options: MutationOptions(
-        document: gql(
-          EditOperatingTimeMutation().editOperatingTime,
-        ),
-        update: (
-          GraphQLDataProxy? cache,
-          QueryResult? result,
-        ) {
-          if (result!.hasException) {
-            String errMessage = result.exception!.graphqlErrors[0].toString();
-            showDialog(
-              context: context,
-              builder: (BuildContext context) {
-                return AndroidAlertDialog(
-                  title: 'Error',
-                  message: Text(
-                    errMessage,
-                    style: const TextStyle(
-                      color: Colors.redAccent,
-                    ),
-                  ),
-                  popTimes: 2,
-                );
-              },
-            );
-          }
-        },
-        onCompleted: (dynamic editOperatingTimeResult) async {
-          if (editOperatingTimeResult != null) {
-            String message =
-                editOperatingTimeResult['editOperatingTime']['message'];
-            if (message.isNotEmpty) {
-              showDialog(
-                context: context,
-                builder: (BuildContext context) {
-                  return AndroidAlertDialog(
-                    title: 'Completed',
-                    message: Text(
-                      message,
-                      style: const TextStyle(
-                        color: Colors.lightGreen,
-                      ),
-                    ),
-                    popTimes: 2,
-                  );
-                },
-              );
-            }
-          }
-        },
-      ),
-      builder: (
-        RunMutation? runEditOperatingTimeMutation,
-        QueryResult? editOperatingTimeResult,
-      ) {
-        if (editOperatingTimeResult!.isLoading) {
-          return const AndroidLoading();
-        }
-
-        return Form(
+    return Obx(() {
+      if (operatingTimeController.isLoading) {
+        return const AndroidLoading();
+      }
+      return SingleChildScrollView(
+        child: Form(
           key: _formKey,
           child: Container(
             constraints: const BoxConstraints(
@@ -133,9 +91,9 @@ class EditOperatingTime extends StatelessWidget {
                       ),
                     ),
                   ),
-                  const AndroidTextField(
-                    value: '_day',
+                  AndroidTextField(
                     label: 'Day',
+                    value: operatingTimeController.day,
                     enabled: false,
                   ),
                   const SizedBox(height: 10.0),
@@ -146,17 +104,19 @@ class EditOperatingTime extends StatelessWidget {
                   const SizedBox(height: 10.0),
                   Time(
                     label: 'Select start time',
-                    selectedTime: '_startTime' ?? startTime,
+                    selectedTime: operatingTimeController.startTime,
                     setTime: (time) {
-                      // _startTime.value = DateFormat.Hm().format(time);
+                      operatingTimeController.startTime =
+                          DateFormat.Hm().format(time);
                     },
                   ),
                   const SizedBox(height: 10.0),
                   Time(
                     label: 'Select end time',
-                    selectedTime: '_endTime' ?? endTime,
+                    selectedTime: operatingTimeController.endTime,
                     setTime: (time) {
-                      // _endTime.value = DateFormat.Hm().format(time);
+                      operatingTimeController.endTime =
+                          DateFormat.Hm().format(time);
                     },
                   ),
                   const SizedBox(height: 10.0),
@@ -164,15 +124,15 @@ class EditOperatingTime extends StatelessWidget {
                     label: 'Edit',
                     backgroundColor: Theme.of(context).primaryColor,
                     pressed: () {
-                      _submit(editOperatingTime: runEditOperatingTimeMutation);
+                      _submit();
                     },
                   ),
                 ],
               ),
             ),
           ),
-        );
-      },
-    );
+        ),
+      );
+    });
   }
 }

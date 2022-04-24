@@ -15,6 +15,8 @@ class AndroidTextField extends StatelessWidget {
   final void Function(String)? onInputChange;
   final String? Function(String?)? onValidation;
   final bool enabled;
+  final void Function()? suffixIconAction;
+  final int maxLines;
 
   const AndroidTextField({
     this.label,
@@ -31,6 +33,8 @@ class AndroidTextField extends StatelessWidget {
     this.onValidation,
     this.obscureText = false,
     this.enabled = true,
+    this.suffixIconAction,
+    this.maxLines = 1,
     Key? key,
   }) : super(key: key);
 
@@ -43,7 +47,10 @@ class AndroidTextField extends StatelessWidget {
       validator: onValidation,
       cursorColor: cursorColor,
       enabled: enabled,
+      maxLines: maxLines,
+      keyboardType: TextInputType.multiline,
       decoration: InputDecoration(
+        contentPadding: const EdgeInsets.symmetric(vertical: 0.0, horizontal: 20.0),
         focusedBorder: OutlineInputBorder(
           borderSide: BorderSide(color: borderColor),
           borderRadius: BorderRadius.all(
@@ -73,10 +80,10 @@ class AndroidTextField extends StatelessWidget {
               )
             : null,
         suffixIcon: suffixIcon != null
-            ? Icon(
-                suffixIcon,
-                color: suffixIconColor,
-              )
+            ? GestureDetector(child: Icon(
+          suffixIcon,
+          color: suffixIconColor,
+        ), onTap: suffixIconAction,)
             : null,
       ),
     );

@@ -6,15 +6,15 @@ class Client {
   final String email;
   final String fullName;
   final String phoneNumber;
-  final Address address;
-  final List<Booking> bookings;
+  final Address? address;
+  final List<Booking>? bookings;
 
   Client({
     required this.id,
     required this.email,
     required this.fullName,
     required this.phoneNumber,
-    required this.bookings,
-    required this.address,
+    this.bookings,
+    this.address,
   });
 }

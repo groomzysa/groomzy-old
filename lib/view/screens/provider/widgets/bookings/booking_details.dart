@@ -29,20 +29,13 @@ class BookingDetails extends StatelessWidget {
       return Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          SizedBox(
-            width: 150.0,
-            child: Text(
-              title,
-              style: const TextStyle(fontWeight: FontWeight.w500),
-            ),
+          Text(
+            title,
+            style: const TextStyle(fontWeight: FontWeight.w500),
           ),
-          // SizedBox(width: 20.0,),
-          SizedBox(
-            width: 150.0,
-            child: Text(
-              value,
-              style: TextStyle(color: valueColor),
-            ),
+          Text(
+            value,
+            style: TextStyle(color: valueColor),
           ),
         ],
       );
@@ -85,15 +78,15 @@ class BookingDetails extends StatelessWidget {
             const SizedBox(height: 10.0),
             bookingData(
               title: 'Status:',
-              value: '$bookingStatus',
+              value: Utils().mapBookingStatusToString(bookingStatus),
               valueColor: Utils().bookingStatusColor(bookingStatus),
             ),
             const SizedBox(height: 10.0),
-            bookingData(title: 'Date time:', value: bookingDate),
+            bookingData(title: 'Date:', value: bookingDate),
             const SizedBox(height: 10.0),
             bookingData(title: 'Time:', value: bookingTime),
             const SizedBox(height: 10.0),
-            bookingData(title: 'In house call:', value: inHouse),
+            bookingData(title: 'In-house:', value: inHouse),
             const SizedBox(height: 10.0),
           ],
         ),

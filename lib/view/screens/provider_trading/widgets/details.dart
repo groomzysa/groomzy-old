@@ -59,15 +59,13 @@ class Details extends StatelessWidget {
       Address? address = providerController.provider.address;
       List<Staff>? staffs = providerController.provider.staffs;
       List<DayTime>? dayTimes = providerController.provider.dayTimes ?? [];
-      print(address?.address);
-      print(address?.longitude);
-      print(address?.latitude);
 
       return Column(
         children: [
           mapContainer(
             context: context,
-            address: address?.address ?? '',
+            address:
+                '${address?.streetNumber}, ${address?.streetName}, ${address?.suburbName}, ${address?.cityName}, ${address?.provinceName}, ${address?.areaCode} ',
             lat: address?.latitude ?? 0,
             log: address?.longitude ?? 0,
           ),
@@ -75,7 +73,7 @@ class Details extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.only(left: 10),
             child: Align(
-              alignment: Alignment.center,
+              alignment: Alignment.centerLeft,
               child: Text(
                 'Staffers',
                 textAlign: TextAlign.left,
@@ -108,39 +106,52 @@ class Details extends StatelessWidget {
                   ),
                 ),
               if (staffs != null && staffs.isNotEmpty)
-                SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Row(
-                    children: [
-                      ...staffs
-                          .map(
-                            (staff) => Column(
-                              children: [
-                                CircleAvatar(
-                                  backgroundColor: Colors.white,
-                                  child: CircleAvatar(
-                                    radius: 18,
-                                    backgroundColor: Colors.black12,
-                                    child: CircleAvatar(
-                                      radius: 16,
-                                      backgroundColor: Colors.white,
-                                      child: Text(
-                                        staff.fullName
-                                            .split(' ')[0][0]
-                                            .toString(),
-                                        style: const TextStyle(
-                                          color: Colors.black,
+                Container(
+                  margin: const EdgeInsets.only(
+                    left: 10.0,
+                  ),
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        children: [
+                          ...staffs
+                              .map(
+                                (staff) => Container(
+                                  width: 80,
+                                  constraints:
+                                      const BoxConstraints(maxWidth: 100),
+                                  child: Column(
+                                    children: [
+                                      CircleAvatar(
+                                        backgroundColor: Colors.white,
+                                        child: CircleAvatar(
+                                          radius: 18,
+                                          backgroundColor: Colors.black12,
+                                          child: CircleAvatar(
+                                            radius: 16,
+                                            backgroundColor: Colors.white,
+                                            child: Text(
+                                              staff.fullName
+                                                  .split(' ')[0][0]
+                                                  .toString(),
+                                              style: const TextStyle(
+                                                color: Colors.black,
+                                              ),
+                                            ),
+                                          ),
                                         ),
                                       ),
-                                    ),
+                                      Text(staff.fullName),
+                                    ],
                                   ),
                                 ),
-                                Text(staff.fullName.split(' ')[0].toString()),
-                              ],
-                            ),
-                          )
-                          .toList()
-                    ],
+                              )
+                              .toList()
+                        ],
+                      ),
+                    ),
                   ),
                 ),
             ],
@@ -149,7 +160,7 @@ class Details extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.only(left: 10),
             child: Align(
-              alignment: Alignment.center,
+              alignment: Alignment.centerLeft,
               child: Text(
                 'Operating day times',
                 textAlign: TextAlign.left,

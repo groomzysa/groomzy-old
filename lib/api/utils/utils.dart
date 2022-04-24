@@ -5,6 +5,7 @@ import 'package:get_storage/get_storage.dart';
 import 'package:groomzy/model/address.dart';
 import 'package:groomzy/model/booking.dart';
 import 'package:groomzy/model/category.dart';
+import 'package:groomzy/model/client.dart';
 import 'package:groomzy/model/day.dart';
 import 'package:groomzy/model/day_time.dart';
 import 'package:groomzy/model/provider.dart';
@@ -65,42 +66,63 @@ class APIUtils {
     Map _address = provider['address'];
     Address address = Address(
       id: _address['id'],
-      address: _address['address'],
+      streetNumber: _address['streetNumber'],
+      streetName: _address['streetName'],
+      suburbName: _address['suburbName'],
+      cityName: _address['cityName'],
+      provinceName: _address['provinceName'],
+      areaCode: _address['areaCode'],
       latitude: _address['latitude'],
       longitude: _address['longitude'],
     );
 
     // Provider bookings
     List<Booking> bookings = [];
-    for (var b in provider['bookings'] ?? []) {
+    for (var providerBooking in provider['bookings'] ?? []) {
       // Exclude deleted bookings
-      if (b['status'] != 'Deleted') {
-        final bRating = b['rating'];
-        final bService = b['service'];
+      if (providerBooking['status'] != 'Deleted') {
+        final bRating = providerBooking['rating'];
+        final bService = providerBooking['service'];
+        final bClient = providerBooking['client'];
+        final bStaff = providerBooking['staff'];
 
-        bookings.add(Booking(
-          id: b['id'],
-          bookingTime:
-              DateTime.fromMillisecondsSinceEpoch(int.parse(b['bookingTime'])),
-          status: utils.mapBookingStatus(b['status']),
-          rating: bRating != null
-              ? Rating(
-                  id: bRating['id'],
-                  rate: bRating['rate'],
-                )
-              : null,
-          service: bService != null
-              ? Service(
-                  id: bService['id'],
-                  title: bService['title'],
-                  price: double.parse(bService['price'].toString()),
-                  duration: double.parse(bService['duration'].toString()),
-                  durationUnit: bService['durationUnit'],
-                  inHouse: bService['inHouse'],
-                  description: bService['description'],
-                )
-              : null,
-        ));
+        bookings.add(
+          Booking(
+            id: providerBooking['id'],
+            bookingTime: DateTime.fromMillisecondsSinceEpoch(
+                int.parse(providerBooking['bookingTime'])),
+            status: Utils().mapBookingStatus(providerBooking['status']),
+            rating: bRating != null
+                ? Rating(
+                    id: bRating['id'],
+                    rate: double.parse(bRating['rate'].toString()),
+                    comment: bRating['comment'],
+                  )
+                : null,
+            service: Service(
+              id: bService['id'],
+              title: bService['title'],
+              price: double.parse(bService['price'].toString()),
+              duration: double.parse(bService['duration'].toString()),
+              durationUnit: bService['durationUnit'],
+              inHouse: bService['inHouse'],
+              description: bService['description'],
+            ),
+            client: Client(
+                id: bClient['id'],
+                fullName: bClient['fullName'],
+                email: bClient['email'],
+                phoneNumber: bClient['phoneNumber']),
+            staff: Staff(
+              id: bStaff['id'],
+              fullName: bStaff['fullName'],
+            ),
+            inHouse: providerBooking['inHouse'],
+            createdAt: DateTime.fromMillisecondsSinceEpoch(
+              int.parse(providerBooking['createdAt']),
+            ),
+          ),
+        );
       }
     }
 
@@ -164,9 +186,9 @@ class APIUtils {
     if (serviceProviderCategories.isNotEmpty) {
       for (var sPC in serviceProviderCategories) {
         if (!categories.contains(sPC.category)) {
-          categories.add(sPC.category);
+          categories.add(sPC.category!);
         }
-        services.add(sPC.service);
+        services.add(sPC.service!);
       }
     }
 
@@ -184,9 +206,9 @@ class APIUtils {
       bool isHours = service.durationUnit == 'hrz';
       int duration = 0;
       if (isHours) {
-        duration = (service.duration! * 60).toInt();
+        duration = (service.duration * 60).toInt();
       } else {
-        duration = service.duration!.toInt();
+        duration = service.duration.toInt();
       }
 
       if (minimumDuration == -1) {
@@ -202,7 +224,7 @@ class APIUtils {
 
     return Provider(
       id: provider['id'],
-      name: provider['tradingName'] ?? provider['fullName'],
+      fullName: provider['fullName'],
       address: address,
       bookings: bookings,
       categories: categories,
@@ -212,5 +234,167 @@ class APIUtils {
       dayTimes: dayTimes,
       minimumDuration: minimumDuration,
     );
+  }
+
+  List<ServiceProviderCategory> formatServiceProviderCategory(
+      List providerServices) {
+    // Provider services categories
+    List<ServiceProviderCategory> serviceProviderCategories = [];
+    for (var sPC in providerServices) {
+      serviceProviderCategories.add(
+        ServiceProviderCategory(
+          category: Category(
+            id: sPC['category']['id'],
+            category: sPC['category']['category'],
+          ),
+          service: Service(
+            id: sPC['service']['id'],
+            description: sPC['service']['description'],
+            duration: double.parse(sPC['service']['duration'].toString()),
+            durationUnit: sPC['service']['durationUnit'],
+            inHouse: sPC['service']['inHouse'],
+            price: double.parse(sPC['service']['price'].toString()),
+            title: sPC['service']['title'],
+          ),
+        ),
+      );
+    }
+
+    return serviceProviderCategories;
+  }
+
+  List<DayTime> formatProviderOperatingTimes(List providerDayTimes) {
+    // Provider business operating day times
+    List<DayTime> dayTimes = [];
+    for (var dT in providerDayTimes) {
+      dayTimes.add(
+        DayTime(
+          id: dT['id'],
+          day: Day(
+            id: dT['day']['id'],
+            day: Utils().mapDay(dT['day']['day']),
+          ),
+          time: Time(
+            id: dT['time']['id'],
+            startTime: dT['time']['startTime'],
+            endTime: dT['time']['endTime'],
+          ),
+        ),
+      );
+    }
+
+    return dayTimes;
+  }
+
+  List<Staff> formatProviderStaffs(List providerStaffs) {
+    List<Staff> staffs = [];
+    for (var staff in providerStaffs) {
+      staffs.add(Staff(id: staff['id'], fullName: staff['fullName']));
+    }
+
+    return staffs;
+  }
+
+  List<Booking> formatProviderBookings(List providerBookings) {
+    List<Booking> bookings = [];
+    for (var providerBooking in providerBookings) {
+      // Exclude deleted bookings
+      if (providerBooking['status'] != 'Deleted') {
+        final bRating = providerBooking['rating'];
+        final bService = providerBooking['service'];
+        final bClient = providerBooking['client'];
+        final bStaff = providerBooking['staff'];
+
+        bookings.add(
+          Booking(
+            id: providerBooking['id'],
+            bookingTime: DateTime.fromMillisecondsSinceEpoch(
+                int.parse(providerBooking['bookingTime'])),
+            status: Utils().mapBookingStatus(providerBooking['status']),
+            rating: bRating != null
+                ? Rating(
+                    id: bRating['id'],
+                    rate: bRating['rate'],
+                    comment: bRating['comment'],
+                  )
+                : null,
+            service: Service(
+              id: bService['id'],
+              title: bService['title'],
+              price: double.parse(bService['price'].toString()),
+              duration: double.parse(bService['duration'].toString()),
+              durationUnit: bService['durationUnit'],
+              inHouse: bService['inHouse'],
+              description: bService['description'],
+            ),
+            client: Client(
+                id: bClient['id'],
+                fullName: bClient['fullName'],
+                email: bClient['email'],
+                phoneNumber: bClient['phoneNumber']),
+            staff: Staff(
+              id: bStaff['id'],
+              fullName: bStaff['fullName'],
+            ),
+            inHouse: providerBooking['inHouse'],
+            createdAt: DateTime.fromMillisecondsSinceEpoch(
+                int.parse(providerBooking['createdAt'])),
+          ),
+        );
+      }
+    }
+
+    return bookings;
+  }
+
+  List<Booking> formatClientBookings(List providerBookings) {
+    List<Booking> bookings = [];
+    for (var providerBooking in providerBookings) {
+      // Exclude deleted bookings
+      if (providerBooking['status'] != 'Deleted') {
+        final bRating = providerBooking['rating'];
+        final bService = providerBooking['service'];
+        final bProvider = providerBooking['provider'];
+        final bStaff = providerBooking['staff'];
+
+        bookings.add(
+          Booking(
+            id: providerBooking['id'],
+            bookingTime: DateTime.fromMillisecondsSinceEpoch(
+                int.parse(providerBooking['bookingTime'])),
+            status: Utils().mapBookingStatus(providerBooking['status']),
+            rating: bRating != null
+                ? Rating(
+                    id: bRating['id'],
+                    rate: double.parse(bRating['rate'].toString()),
+                    comment: bRating['comment'],
+                  )
+                : null,
+            service: Service(
+              id: bService['id'],
+              title: bService['title'],
+              price: double.parse(bService['price'].toString()),
+              duration: double.parse(bService['duration'].toString()),
+              durationUnit: bService['durationUnit'],
+              inHouse: bService['inHouse'],
+              description: bService['description'],
+            ),
+            provider: Provider(
+              id: bProvider['id'],
+              fullName: bProvider['fullName'],
+            ),
+            staff: Staff(
+              id: bStaff['id'],
+              fullName: bStaff['fullName'],
+            ),
+            inHouse: providerBooking['inHouse'],
+            createdAt: DateTime.fromMillisecondsSinceEpoch(
+                int.parse(providerBooking['createdAt'])),
+          ),
+        );
+      }
+    }
+
+    return bookings;
   }
 }

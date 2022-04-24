@@ -20,18 +20,18 @@ class AndroidCategoryLabels extends StatelessWidget {
       {
         'imageAssetPath': makeupArtistImage,
         'category': makeupArtist,
-        'active': false
+        'active': true
       },
-      {'imageAssetPath': spaImage, 'category': spa, 'active': false},
+      {'imageAssetPath': spaImage, 'category': spa, 'active': true},
       {
         'imageAssetPath': nailTechnicianImage,
         'category': nailTechnician,
-        'active': false
+        'active': true
       },
     ];
     return Container(
-      height: 130,
-      margin: const EdgeInsets.only(top: 10.0),
+      height: 120,
+      margin: const EdgeInsets.only(top: 5.0),
       child: ListView(
         scrollDirection: Axis.horizontal,
         shrinkWrap: true,

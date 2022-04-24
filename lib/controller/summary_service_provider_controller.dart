@@ -38,30 +38,25 @@ class SummaryServiceProviderController extends GetxController {
   get providerLocation => _providerLocation.value;
   set providerLocation(input) => _providerLocation.value = input;
 
-  Future<String?> getDistance(String? providerAddress) async {
+  Future<String?> getDistance(double? latitude, double? longitude, bool hasAddress) async {
     try {
       isLoading = true;
-      if(providerAddress == null) {
+      if (!hasAddress || latitude == null || longitude == null) {
         isLoading = false;
         return null;
       }
       var dPosition = await GeolocationService().determinePosition();
       if (dPosition != null) {
-        var pPosition =
-            await GeolocationService().getLocationFromAddress(providerAddress);
-
-        if (pPosition != null) {
-          var distance = (geolocator.Geolocator.distanceBetween(
-                dPosition.latitude,
-                dPosition.longitude,
-                pPosition.latitude,
-                pPosition.longitude,
-              ) /
-              1000);
-          if (distance > 0) {
-            isLoading = false;
-            return distance.toStringAsFixed(1);
-          }
+        var distance = (geolocator.Geolocator.distanceBetween(
+              dPosition.latitude,
+              dPosition.longitude,
+              latitude,
+              longitude,
+            ) /
+            1000);
+        if (distance > 0) {
+          isLoading = false;
+          return distance.toStringAsFixed(1);
         }
       }
       isLoading = false;

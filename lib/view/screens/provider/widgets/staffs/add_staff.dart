@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:get/get.dart';
-import 'package:graphql_flutter/graphql_flutter.dart';
-import 'package:groomzy/api/graphql/mutations/staff/add_staff.dart';
-import 'package:groomzy/controller/provider_controller.dart';
+import 'package:groomzy/api/graphql/mutations/provider/staff/add_staff_mutation.dart';
+import 'package:groomzy/controller/staff_controller.dart';
 import 'package:groomzy/view/widgets/alert_dialog/alert_dialog.dart';
 import 'package:groomzy/view/widgets/button/button.dart';
 import 'package:groomzy/view/widgets/loading/loading.dart';
@@ -13,84 +12,56 @@ class AddStaff extends StatelessWidget {
   AddStaff({Key? key}) : super(key: key);
 
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
-  final ProviderController providerController = Get.find();
+  final StaffController staffController = Get.find();
 
   @override
   Widget build(BuildContext context) {
-    Future<void> _submit(
-        {MultiSourceResult Function(Map<String, dynamic>,
-                {Object? optimisticResult})?
-            addStaff}) async {
+    Future<void> _submit() async {
       if (!_formKey.currentState!.validate()) {
         return;
       }
       _formKey.currentState!.save();
 
-      addStaff!({
-        'fullName': '_fullName.value',
-      });
+      try {
+        Map<String, dynamic> response =
+            await AddStaffMutation().addStaffMutation();
+        if (response['status']!) {
+          Get.back();
+          showDialog(
+            barrierDismissible: false,
+            context: context,
+            builder: (BuildContext context) {
+              return AndroidAlertDialog(
+                title: 'Info',
+                message: Text(
+                  response['message'],
+                ),
+                popTimes: 1,
+              );
+            },
+          );
+        }
+      } catch (err) {
+        showDialog(
+          context: context,
+          builder: (BuildContext context) {
+            return AndroidAlertDialog(
+              title: 'Oops!',
+              message: Text(
+                '$err',
+              ),
+            );
+          },
+        );
+      }
     }
 
-    return Mutation(
-      options: MutationOptions(
-        document: gql(
-          AddStaffMutation().addStaff,
-        ),
-        update: (
-          GraphQLDataProxy? cache,
-          QueryResult? result,
-        ) {
-          if (result!.hasException) {
-            String errMessage = result.exception!.graphqlErrors[0].message;
-            showDialog(
-              context: context,
-              builder: (BuildContext context) {
-                return AndroidAlertDialog(
-                  title: 'Error',
-                  message: Text(
-                    errMessage,
-                    style: const TextStyle(
-                      color: Colors.redAccent,
-                    ),
-                  ),
-                  popTimes: 2,
-                );
-              },
-            );
-          }
-        },
-        onCompleted: (dynamic addStaffResult) async {
-          if (addStaffResult != null) {
-            String message = addStaffResult['addStaff']['message'];
-            if (message.isNotEmpty) {
-              showDialog(
-                context: context,
-                builder: (BuildContext context) {
-                  return AndroidAlertDialog(
-                    title: 'Completed',
-                    message: Text(
-                      message,
-                      style: const TextStyle(
-                        color: Colors.lightGreen,
-                      ),
-                    ),
-                    popTimes: 2,
-                  );
-                },
-              );
-            }
-          }
-        },
-      ),
-      builder: (
-        RunMutation? runAddStaffMutation,
-        QueryResult? addStaffResult,
-      ) {
-        if (addStaffResult!.isLoading) {
-          return const AndroidLoading();
-        }
-
-        return Form(
+    return Obx(() {
+      if (staffController.isLoading) {
+        return const AndroidLoading();
+      }
+      return SingleChildScrollView(
+        child: Form(
           key: _formKey,
           child: Container(
             constraints: const BoxConstraints(
@@ -118,10 +89,10 @@ class AddStaff extends StatelessWidget {
                   ),
                   const SizedBox(height: 10.0),
                   AndroidTextField(
-                    value: '_fullName.value',
+                    value: staffController.fullName,
                     label: 'Full name',
                     onInputChange: (String input) {
-                      // _fullName.value = input;
+                      staffController.fullName = input;
                     },
                     onValidation: (String? input) {
                       if (input == null || input.isEmpty) {
@@ -136,15 +107,15 @@ class AddStaff extends StatelessWidget {
                     label: 'Add',
                     backgroundColor: Theme.of(context).primaryColor,
                     pressed: () {
-                      _submit(addStaff: runAddStaffMutation);
+                      _submit();
                     },
                   ),
                 ],
               ),
             ),
           ),
-        );
-      },
-    );
+        ),
+      );
+    });
   }
 }

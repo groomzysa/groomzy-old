@@ -5,6 +5,7 @@ const String appTitle='Groomzy';
 const String homeTitle='Home';
 const String signInTitle='Signin';
 const String signupTitle='Signup';
+const String editProfileTitle='Edit profile';
 const String signOutTitle='Sign out';
 const String aboutTitle='About';
 const String contactTitle='Contacts';
@@ -15,6 +16,7 @@ const String checkoutTitle='Checkout';
 const String exploreTitle='Home';
 const String clientTitle='Client';
 const String tsAndCsTitle='Ts and Cs';
+const String requestPasswordResetTitle='Request password reset';
 
 /*
  * Assets constants

@@ -3,13 +3,13 @@ import 'package:groomzy/model/provider.dart';
 import 'package:groomzy/model/service.dart';
 
 class ServiceProviderCategory {
-  final Service service;
+  final Service? service;
   final Provider? provider;
-  final Category category;
+  final Category? category;
 
   ServiceProviderCategory({
     this.provider,
-    required this.category,
-    required this.service,
+    this.category,
+    this.service,
   });
 }

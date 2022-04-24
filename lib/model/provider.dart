@@ -10,9 +10,8 @@ import 'package:groomzy/model/staff.dart';
 class Provider {
   final int? id;
   final String? email;
-  final String? name;
+  final String? fullName;
   final String? phoneNumber;
-  final String? tradingName;
   final Address? address;
   final List<Booking>? bookings;
   final List<ServiceProviderCategory>? serviceProviderCategories;
@@ -24,11 +23,10 @@ class Provider {
   final List<Rating>? ratings;
 
   Provider({
-     this.id,
+    this.id,
     this.email,
-     this.name,
+    this.fullName,
     this.phoneNumber,
-    this.tradingName,
     this.bookings,
     this.dayTimes,
     this.address,

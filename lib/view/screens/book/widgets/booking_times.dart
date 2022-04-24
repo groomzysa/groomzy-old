@@ -1,4 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import 'package:groomzy/controller/book_controller.dart';
+import 'package:groomzy/controller/provider_controller.dart';
+import 'package:groomzy/controller/provider_controller.dart';
 import 'package:groomzy/model/booking.dart';
 import 'package:groomzy/model/day_time.dart';
 import 'package:groomzy/model/service.dart';
@@ -7,29 +11,26 @@ import 'package:groomzy/utils/utils.dart';
 import 'package:intl/intl.dart';
 
 class BookingTimes extends StatelessWidget {
-  final Function selectTime;
-  final List<DayTime> dayTimes;
-  final DateTime selectedDay;
-  final String? selectedTime;
   final int minimumDuration;
   final int duration;
   final List<Booking> bookings;
 
-  const BookingTimes({
-    required this.dayTimes,
-    required this.selectTime,
-    required this.selectedDay,
-    this.selectedTime,
+  BookingTimes({
     required this.minimumDuration,
     required this.duration,
     required this.bookings,
     Key? key,
   }) : super(key: key);
 
+  final BookController bookController = Get.find();
+  final ProviderController providerController = Get.find();
+
   @override
   Widget build(BuildContext context) {
+    List<DayTime> dayTimes = providerController.provider.dayTimes ?? [];
     List<List<Map>> times() {
-      String day = DateFormat.yMEd().add_jms().format(selectedDay).split(',')[0];
+      String day =
+          DateFormat.yMEd().add_jms().format(bookController.selectedDay).split(',')[0];
       var selectedDayOperating = dayTimes.where((dayTime) {
         return Utils().mapDayToString(dayTime.day.day) == day;
       }).toList();
@@ -71,7 +72,7 @@ class BookingTimes extends StatelessWidget {
 
         startTimeOfDay = TimeOfDayExtension(startTimeOfDay).add(
           hour: isMinutesMore ? hrz + 1 : hrz,
-          minute:isMinutesMore ? min - 60 : min,
+          minute: isMinutesMore ? min - 60 : min,
         );
 
         start = startTimeOfDay.hour + (startTimeOfDay.minute / 60);
@@ -81,16 +82,22 @@ class BookingTimes extends StatelessWidget {
 
       for (var time in _times) {
         bookings.where((booking) {
-          return booking.bookingTime!.difference(selectedDay).inDays == 0;
-        }).forEach((booking) {
+          String bookingDay =
+          DateFormat.yMEd().add_jms().format(booking.bookingTime).split(',')[0];
 
-          Service service = booking.service!;
+          String bookingDate = DateFormat.yMd().format(bookController.selectedDay);
+          String selectedDate = DateFormat.yMd().format(booking.bookingTime);
+
+          return bookingDay == day && bookingDate == selectedDate;
+        }).forEach((booking) {
+          Service service = booking.service;
           bool isHours = service.durationUnit == 'hrz';
           double durationInMinutes = isHours
               ? double.parse(service.duration.toString()) * 60
               : double.parse(service.duration.toString());
 
-          String strBookingTime = DateFormat().add_Hm().format(booking.bookingTime!);
+          String strBookingTime =
+              DateFormat().add_Hm().format(booking.bookingTime);
           TimeOfDay bookingTime = TimeOfDay(
             hour: int.parse(strBookingTime.split(':')[0]),
             minute: int.parse(strBookingTime.split(':')[1]),
@@ -145,95 +152,100 @@ class BookingTimes extends StatelessWidget {
       return twoDList;
     }
 
-    return Container(
-      height: 130.0,
-      padding: const EdgeInsets.only(bottom: 5.0),
-      child: SingleChildScrollView(
-        scrollDirection: Axis.vertical,
-        child: Column(
-          children: [
-            if (times().isEmpty)
-              Container(
-                margin: const EdgeInsets.only(top: 10.0),
-                child: const Text(
-                  'No available time slots, please choose a different day.',
-                  style: TextStyle(
-                    fontSize: 18.0,
-                    color: Colors.orange,
+    return Obx(() {
+      return Container(
+        constraints: const BoxConstraints(
+          maxHeight: 200.0,
+        ),
+        padding: const EdgeInsets.only(bottom: 5.0),
+        child: SingleChildScrollView(
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Column(
+              children: [
+                if (times().isEmpty)
+                  Container(
+                    margin: const EdgeInsets.only(top: 10.0),
+                    child: const Text(
+                      'No available time slots on this day.\n\nPlease choose a different day.',
+                      style: TextStyle(
+                        color: Colors.orange,
+                      ),
+                    ),
                   ),
-                ),
-              ),
-            ...times().map((columns) {
-              return Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  ...columns.map((time) {
-                    TimeOfDay _time = time['time'];
-                    bool occupied = time['occupied'];
-                    return GestureDetector(
-                      onTap: () {
-                        if (!occupied) {
-                          print({'selectedTime': selectedTime});
-                          if (selectedTime == '${_time.hour}:${_time.minute}') {
-                            selectTime('none');
-                          } else {
-                            selectTime('${_time.hour}:${_time.minute}');
-                          }
-                        }
-                      },
-                      child: SizedBox(
-                        height: 50.0,
-                        width: 95,
-                        child: Card(
-                          elevation:
-                              selectedTime == '${_time.hour}:${_time.minute}' &&
-                                      !occupied
+                ...times().map((columns) {
+                  return Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      ...columns.map((time) {
+                        TimeOfDay _time = time['time'];
+                        bool occupied = time['occupied'];
+                        return GestureDetector(
+                          onTap: () {
+                            if (!occupied) {
+                              if (bookController.selectedTime ==
+                                  '${_time.hour}:${_time.minute}') {
+                                bookController.selectedTime = 'none';
+                                bookController.selectedStaffer = 'none';
+                              } else {
+                                bookController.selectedTime = '${_time.hour}:${_time.minute}';
+                                bookController.selectedStaffer = 'none';
+                              }
+                            }
+                          },
+                          child: Container(
+                            constraints: const BoxConstraints(
+                              minHeight: 50, //minimum height
+                              minWidth: 90, // minimum width
+                            ),
+                            child: Card(
+                              elevation: bookController.selectedTime ==
+                                  '${_time.hour}:${_time.minute}' &&
+                                  !occupied
                                   ? 4
                                   : 0,
-                          shadowColor:
-                              selectedTime == '${_time.hour}:${_time.minute}' &&
-                                      !occupied
+                              shadowColor: bookController.selectedTime ==
+                                  '${_time.hour}:${_time.minute}' &&
+                                  !occupied
                                   ? Theme.of(context).primaryColor
                                   : null,
-                          color: occupied
-                              ? Colors.grey.shade300
-                              : selectedTime == '${_time.hour}:${_time.minute}'
+                              color: occupied
+                                  ? Colors.grey.shade300
+                                  : bookController.selectedTime ==
+                                  '${_time.hour}:${_time.minute}'
                                   ? null
                                   : null,
-                          child: Align(
-                            alignment: Alignment.center,
-                            child: Text(
-                              '${_time.hour}:${_time.minute}',
-                              style: TextStyle(
-                                color: selectedTime ==
-                                            '${_time.hour}:${_time.minute}' &&
+                              child: Align(
+                                alignment: Alignment.center,
+                                child: Text(
+                                  '${_time.hour}:${_time.minute}',
+                                  style: TextStyle(
+                                    color: bookController.selectedTime ==
+                                        '${_time.hour}:${_time.minute}' &&
                                         !occupied
-                                    ? Theme.of(context).primaryColor
-                                    : null,
-                                fontWeight: selectedTime ==
-                                            '${_time.hour}:${_time.minute}' &&
+                                        ? Theme.of(context).primaryColor
+                                        : null,
+                                    fontWeight: bookController.selectedTime ==
+                                        '${_time.hour}:${_time.minute}' &&
                                         !occupied
-                                    ? FontWeight.w500
-                                    : FontWeight.normal,
-                                fontSize: selectedTime ==
-                                            '${_time.hour}:${_time.minute}' &&
-                                        !occupied
-                                    ? 18.0
-                                    : 16,
+                                        ? FontWeight.w500
+                                        : FontWeight.normal,
+                                  ),
+                                ),
                               ),
                             ),
                           ),
-                        ),
-                      ),
-                    );
-                  }).toList(),
-                ],
-              );
-            }),
-          ],
+                        );
+                      }).toList(),
+                    ],
+                  );
+                }),
+              ],
+            ),
+          ),
         ),
-      ),
-    );
+      );
+    });
   }
 }
 

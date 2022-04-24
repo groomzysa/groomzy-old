@@ -1,3 +1,4 @@
+import 'package:auto_size_text/auto_size_text.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:groomzy/controller/book_controller.dart';
@@ -6,7 +7,7 @@ import 'package:groomzy/model/staff.dart';
 class BookingStaffs extends StatelessWidget {
   final List<Staff> staffs;
 
-  BookingStaffs({
+  const BookingStaffs({
     required this.staffs,
     Key? key,
   }) : super(key: key);
@@ -21,7 +22,10 @@ class BookingStaffs extends StatelessWidget {
             children: [
               ...staffs
                   .map(
-                    (staff) => Column(
+                    (staff) => Container(
+                      width: 80,
+                      constraints: const BoxConstraints(maxWidth: 100),
+                      child: Column(
                       children: [
                         GestureDetector(
                           onTap: () {
@@ -39,9 +43,9 @@ class BookingStaffs extends StatelessWidget {
                             child: CircleAvatar(
                               radius: 28,
                               backgroundColor:
-                                  c.selectedStaffer == staff.fullName
-                                      ? Theme.of(context).primaryColor
-                                      : Colors.black12,
+                              c.selectedStaffer == staff.fullName
+                                  ? Theme.of(context).primaryColor
+                                  : Colors.black12,
                               child: CircleAvatar(
                                 radius: 25,
                                 backgroundColor: Colors.white,
@@ -54,12 +58,11 @@ class BookingStaffs extends StatelessWidget {
                             ),
                           ),
                         ),
-                        Text(
-                          staff.fullName.split(' ')[0].toString(),
-                          style: const TextStyle(fontSize: 18.0),
+                        AutoSizeText(
+                          staff.fullName,
                         ),
                       ],
-                    ),
+                    ),),
                   )
                   .toList()
             ],

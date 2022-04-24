@@ -2,12 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:dropdown_search/dropdown_search.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:get/get.dart';
-import 'package:graphql_flutter/graphql_flutter.dart';
+import 'package:groomzy/controller/operating_time_controller.dart';
 import 'package:intl/intl.dart';
 
 import 'package:groomzy/view/widgets/alert_dialog/alert_dialog.dart';
 import 'package:groomzy/controller/provider_controller.dart';
-import 'package:groomzy/api/graphql/mutations/operating_time/add_operating_time.dart';
+import 'package:groomzy/api/graphql/mutations/provider/operating_time/add_operating_time_mutation.dart';
 import 'package:groomzy/utils/utils.dart';
 import 'package:groomzy/view/screens/provider/widgets/operating_times/time.dart';
 import 'package:groomzy/view/widgets/button/button.dart';
@@ -19,86 +19,66 @@ class AddOperatingTime extends StatelessWidget {
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
 
   final ProviderController providerController = Get.find();
+  final OperatingTimeController operatingTimeController = Get.find();
 
   @override
   Widget build(BuildContext context) {
-    Future<void> _submit(
-        {MultiSourceResult Function(Map<String, dynamic>,
-                {Object? optimisticResult})?
-            addOperatingTime}) async {
+    Future<void> _submit() async {
       if (!_formKey.currentState!.validate()) {
         return;
       }
       _formKey.currentState!.save();
 
-      addOperatingTime!({
-        'day': '_day',
-        'startTime': '_startTime',
-        'endTime': '_endTime',
-      });
+      try {
+        Map<String, dynamic> response =
+            await AddOperatingTimeMutation().addOperatingTimeMutation();
+        if (response['status']!) {
+          Get.back();
+          showDialog(
+            barrierDismissible: false,
+            context: context,
+            builder: (BuildContext context) {
+              return AndroidAlertDialog(
+                title: 'Info',
+                message: Text(
+                  response['message'],
+                ),
+                popTimes: 1,
+              );
+            },
+          );
+        }
+      } catch (err) {
+        showDialog(
+          context: context,
+          builder: (BuildContext context) {
+            return AndroidAlertDialog(
+              title: 'Oops!',
+              message: Text(
+                '$err',
+              ),
+            );
+          },
+        );
+      }
     }
 
-    return Mutation(
-      options: MutationOptions(
-        document: gql(
-          AddOperatingTimeMutation().addOperatingTime,
-        ),
-        update: (
-          GraphQLDataProxy? cache,
-          QueryResult? result,
-        ) {
-          if (result!.hasException) {
-            String errMessage = result.exception!.graphqlErrors[0].message;
-            showDialog(
-              context: context,
-              builder: (BuildContext context) {
-                return AndroidAlertDialog(
-                  title: 'Error',
-                  message: Text(
-                    errMessage,
-                    style: const TextStyle(
-                      color: Colors.redAccent,
-                    ),
-                  ),
-                  popTimes: 2,
-                );
-              },
-            );
-          }
-        },
-        onCompleted: (dynamic addOperatingTimeResult) async {
-          if (addOperatingTimeResult != null) {
-            String message =
-                addOperatingTimeResult['addOperatingTime']['message'];
-            if (message.isNotEmpty) {
-              showDialog(
-                context: context,
-                builder: (BuildContext context) {
-                  return AndroidAlertDialog(
-                    title: 'Completed',
-                    message: Text(
-                      message,
-                      style: const TextStyle(
-                        color: Colors.lightGreen,
-                      ),
-                    ),
-                    popTimes: 2,
-                  );
-                },
-              );
-            }
-          }
-        },
-      ),
-      builder: (
-        RunMutation? runAddOperatingTimeMutation,
-        QueryResult? addOperatingTimeResult,
-      ) {
-        if (addOperatingTimeResult!.isLoading) {
-          return const AndroidLoading();
-        }
+    List<String> unSelectedWeekDays(){
+      List<String> activeWeekDays = Utils().weekDays;
+      for(var dT in providerController.operatingTimes) {
+        activeWeekDays.remove(Utils().mapDayToString(dT.day.day));
+      }
 
-        return Form(
+      return activeWeekDays;
+    }
+
+    return Obx(() {
+      if (operatingTimeController.isLoading) {
+        return const AndroidLoading();
+      }
+
+      return SingleChildScrollView(
+        child: Form(
           key: _formKey,
           child: Container(
             constraints: const BoxConstraints(
@@ -127,13 +107,10 @@ class AddOperatingTime extends StatelessWidget {
                   const SizedBox(height: 10.0),
                   DropdownSearch<String>(
                     mode: Mode.MENU,
-                    // showSelectedItem: true,
-                    items: Utils().weekDays(),
-                    label: "Day",
-                    hint: "Select day",
-                    selectedItem: '_day',
+                    items: unSelectedWeekDays(),
+                    selectedItem: operatingTimeController.day.isEmpty ? null : operatingTimeController.day,
                     onChanged: (String? input) {
-                      // _day.value = input;
+                      operatingTimeController.day = input ?? '';
                     },
                     validator: (input) {
                       if (input == null || input.isEmpty) {
@@ -143,7 +120,10 @@ class AddOperatingTime extends StatelessWidget {
                       return null;
                     },
                     dropdownSearchDecoration: const InputDecoration(
+                      labelText: "Day",
+                      hintText: "Select day",
                       labelStyle: TextStyle(color: Colors.grey),
+                      prefixIcon: Icon(Icons.view_day_outlined, color: Colors.grey,),
                       contentPadding:
                           EdgeInsets.only(left: 10.0, top: 5.0, bottom: 5.0),
                       focusedBorder: OutlineInputBorder(
@@ -160,17 +140,19 @@ class AddOperatingTime extends StatelessWidget {
                   const SizedBox(height: 10.0),
                   Time(
                     label: 'Select start time',
-                    selectedTime: '_startTime',
+                    selectedTime: operatingTimeController.startTime,
                     setTime: (time) {
-                      // _startTime.value = DateFormat.Hm().format(time);
+                      operatingTimeController.startTime =
+                          DateFormat.Hm().format(time);
                     },
                   ),
                   const SizedBox(height: 10.0),
                   Time(
                     label: 'Select end time',
-                    selectedTime:' _endTime',
+                    selectedTime: operatingTimeController.endTime,
                     setTime: (time) {
-                      // _endTime.value = DateFormat.Hm().format(time);
+                      operatingTimeController.endTime =
+                          DateFormat.Hm().format(time);
                     },
                   ),
                   const SizedBox(height: 10.0),
@@ -178,15 +160,15 @@ class AddOperatingTime extends StatelessWidget {
                     label: 'Add',
                     backgroundColor: Theme.of(context).primaryColor,
                     pressed: () {
-                      _submit(addOperatingTime: runAddOperatingTimeMutation);
+                      _submit();
                     },
                   ),
                 ],
               ),
             ),
           ),
-        );
-      },
-    );
+        ),
+      );
+    });
   }
 }

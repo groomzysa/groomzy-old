@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:graphql_flutter/graphql_flutter.dart';
-import 'package:groomzy/api/graphql/queries/provider/provider_ratings.dart';
+import 'package:groomzy/api/graphql/queries/provider/provider_ratings_query.dart';
 import 'package:groomzy/controller/provider_controller.dart';
 import 'package:groomzy/utils/utils.dart';
 import 'package:groomzy/view/widgets/loading/loading.dart';
@@ -9,14 +9,16 @@ import 'package:groomzy/view/widgets/rating/rating.dart';
 
 class Reviews extends StatelessWidget {
 
-  const Reviews({Key? key}) : super(key: key);
+  Reviews({Key? key}) : super(key: key);
+
+  final ProviderController providerController = Get.find();
 
   @override
   Widget build(BuildContext context) {
-    return GetBuilder<ProviderController>(builder: (c) => Query(
+    return Obx(() => Query(
       options: QueryOptions(
         document: gql(ProviderRatingsQuery().providerRatings),
-        variables: {'providerId': c.provider.id},
+        variables: {'providerId': providerController.provider.id},
       ),
       builder: (
           QueryResult? providerRatingsResult, {
@@ -36,10 +38,17 @@ class Reviews extends StatelessWidget {
         }
 
         Map<String, dynamic>? data = providerRatingsResult.data;
-        List ratings = [];
+        List bookings = [];
+        List ratedBookings = [];
 
         if (data != null && data['providerRatings'] != null) {
-          ratings = data['providerRatings']['bookings'] ?? [];
+          bookings = data['providerRatings']['bookings'] ?? [];
+
+          for(var booking in bookings) {
+            if (booking['rating'] != null) {
+              ratedBookings.add(booking);
+            }
+          }
         }
 
         return RefreshIndicator(
@@ -61,28 +70,30 @@ class Reviews extends StatelessWidget {
                       ),
                     ),
                   ),
-                if (ratings.isEmpty)
+                if (ratedBookings.isEmpty)
                   Container(
                     margin: EdgeInsets.only(
-                        top: MediaQuery.of(context).size.height * 0.15),
-                    child: Text(
-                      'No ratings available',
+                        top: MediaQuery.of(context).size.height * 0.3),
+                    width: 250,
+                    child: const Text(
+                      'There no reviews for this provider yet.',
                       style: TextStyle(
-                        fontSize: 30.0,
+                        fontSize: 25.0,
                         fontWeight: FontWeight.w500,
-                        color: Theme.of(context).primaryColor,
+                        color: Colors.orange,
                       ),
                     ),
                   ),
-                if (ratings.isNotEmpty)
-                  ...ratings.where((rating) => rating['rating'] != null).map(
-                        (rating) {
-                      Map _rating = rating['rating'];
-                      Map client = rating['client'];
+                if (ratedBookings.isNotEmpty)
+                  ...ratedBookings.map(
+                        (ratedBooking) {
+                      Map rating = ratedBooking['rating'];
+                      Map client = ratedBooking['client'];
                       String fullName = client['fullName'];
                       String firstName = fullName.split(' ')[0];
                       String initial = firstName[0].toUpperCase();
-                      Map ratingReview = Utils().ratingReview(_rating['rate']);
+                      Map ratingReview = Utils().ratingReview(rating['rate']);
+
                       return Column(
                         children: [
                           ListTile(
@@ -115,7 +126,7 @@ class Reviews extends StatelessWidget {
                                   height: 6.0,
                                 ),
                                 AndroidRating(
-                                  ratingCounts: _rating['rate'].toDouble(),
+                                  ratingCounts: rating['rate'].toDouble(),
                                   icon: Icons.star_outline,
                                   iconColor: ratingReview['color'],
                                 ),
@@ -123,7 +134,7 @@ class Reviews extends StatelessWidget {
                                   height: 10.0,
                                 ),
                                 Text(
-                                  _rating['comment'],
+                                  rating['comment'],
                                   style: const TextStyle(
                                     color: Colors.black87,
                                   ),
